@@ -406,13 +406,13 @@ class Branch(Reference):
 
     @property
     def commit(self):
-        return self.commit
+        return self.__commit
 
     @commit.setter
     def commit(self, commit: Union[str, Commit]):
         if isinstance(commit, str):
             commit = Commit(commit_hash=commit, message='', author=None, date=None)
-        self.commit = commit
+        self.__commit = commit
 
 
 @dataclass
