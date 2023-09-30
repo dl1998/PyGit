@@ -1,0 +1,4 @@
+# Changes in .github repository shall always be approved by an owner
+.github @dl1998
+setup.py @dl1998
+.pylintrc @dl1998

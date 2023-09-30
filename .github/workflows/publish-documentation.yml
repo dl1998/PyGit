@@ -1,0 +1,33 @@
+name: Publish Documentation
+on:
+  push:
+    branches: ['main', 'release']
+permissions:
+    contents: write
+jobs:
+  sphinx-docs:
+    name: Sphinx Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.7"
+      - name: Update pip
+        run: python3 -m pip install --upgrade pip
+      - name: Install dependencies
+        run: python3 -m pip install -r requirements.txt
+      - name: Generate documentation for modules
+        run: python3 setup.py sphinx_update_modules
+      - name: Build Sphinx documentation
+        run: python3 setup.py sphinx_build
+      - name: Publish Documentation
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          publish_branch: gh-pages
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: docs/build/
+          force_orphan: true
+          keep_files: true
