@@ -1,34 +1,50 @@
-from enum import Enum
+"""
+Module contains classes that defines options that could be configured for 'git pull' command.
+Reference: https://git-scm.com/docs/git-pull
+"""
+from sources.options.options import GitCommand, GitOptionDefinition, CommandOptions
 
-from sources.options.options import GitOptions, GitOptionDefinition
 
+class PullCommandDefinitions(GitCommand):
+    """
+    Options definitions class for 'git pull' command, it contains definitions of the options for 'git pull'.
+    """
 
-class PullOptionsDefinitions(GitOptions):
-    class Options(Enum):
+    class Options(CommandOptions):
+        """
+        Options class for 'git pull' command, it contains options that can be configured.
+        """
         QUIET = 'quiet'
         VERBOSE = 'verbose'
         RECURSE_SUBMODULES = 'recurse-submodules'
+        COMMIT = 'commit'
+        FAST_FORWARD_ONLY = 'ff-only'
+        FAST_FORWARD = 'ff'
+        ALL = 'all'
+        FORCE = 'force'
         REPOSITORY = 'repository'
         REFSPEC = 'refspec'
 
-    class RecurseSubmodulesChoices(Enum):
+    class RecurseSubmodulesChoices(CommandOptions):
+        """
+        Class represents choices enum for recurse-submodule option.
+        """
         YES = 'yes'
         ON_DEMAND = 'on-demand'
         NO = 'no'
 
-        @classmethod
-        def create_from_value(cls, value: str):
-            for element in cls:
-                if element.value == value:
-                    return element
-
     def __init__(self):
-        super().__init__()
+        super().__init__('pull')
         self.definitions = [
-            GitOptionDefinition(name=self.Options.QUIET.value, type=bool, short_name='q'),
-            GitOptionDefinition(name=self.Options.VERBOSE.value, type=bool, short_name='v'),
-            GitOptionDefinition(name=self.Options.RECURSE_SUBMODULES.value, type=str,
+            GitOptionDefinition(name=self.Options.QUIET, type=bool, short_name='q'),
+            GitOptionDefinition(name=self.Options.VERBOSE, type=bool, short_name='v'),
+            GitOptionDefinition(name=self.Options.RECURSE_SUBMODULES, type=str,
                                 choices=self.RecurseSubmodulesChoices, separator='='),
-            GitOptionDefinition(name=self.Options.REPOSITORY.value, type=str, positional=True, position=0),
-            GitOptionDefinition(name=self.Options.REFSPEC.value, type=str, positional=True, position=1),
+            GitOptionDefinition(name=self.Options.COMMIT, type=bool),
+            GitOptionDefinition(name=self.Options.FAST_FORWARD_ONLY, type=bool),
+            GitOptionDefinition(name=self.Options.FAST_FORWARD, type=bool),
+            GitOptionDefinition(name=self.Options.ALL, type=bool),
+            GitOptionDefinition(name=self.Options.FORCE, type=bool, short_name='f'),
+            GitOptionDefinition(name=self.Options.REPOSITORY, type=str, positional=True, position=0),
+            GitOptionDefinition(name=self.Options.REFSPEC, type=str, positional=True, position=1),
         ]
