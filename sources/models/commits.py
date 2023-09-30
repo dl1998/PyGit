@@ -14,7 +14,7 @@ class Commit:
     message: str
     author: 'Author'
     date: datetime
-    parent: 'Commit' = field(repr=False)
+    parent: Optional['Commit'] = field(repr=False)
     commit_hash: str = field(default_factory=str)
     tags: List['Tag'] = field(default_factory=list)
 
