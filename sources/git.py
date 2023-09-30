@@ -411,6 +411,8 @@ class GitRepository:
         for file_path in files:
             if isinstance(file_path, Path):
                 file_path = str(file_path.absolute())
+            if not isinstance(file_path, list):
+                file_path = [file_path]
             options = list(options)
             options.append(AddCommandDefinitions.Options.PATHSPEC.create_option(file_path))
             try:
@@ -448,6 +450,8 @@ class GitRepository:
             else:
                 file_path = self.__repository_information.path.joinpath(file_path)
             file_path = str(file_path.absolute())
+            if not isinstance(file_path, list):
+                file_path = [file_path]
             options = list(options)
             options.append(RmCommandDefinitions.Options.PATHSPEC.create_option(file_path))
             try:
