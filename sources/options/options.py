@@ -223,7 +223,6 @@ class CommandOptions(Enum):
     """
     Base class for git options enum.
     """
-
     @classmethod
     def create_from_value(cls, value: str) -> Optional['CommandOptions']:
         """
@@ -231,7 +230,7 @@ class CommandOptions(Enum):
 
         :param value: Enum value from the class.
         :type value: str
-        :return: Optional[CommandOptions]
+        :return: CommandOptions instance.
         """
         for element in cls:
             if element.value == value:
