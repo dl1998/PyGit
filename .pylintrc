@@ -67,7 +67,7 @@ ignored-modules=
 
 # Python code to execute, usually for sys.path manipulation such as
 # pygtk.require().
-#init-hook=
+init-hook='import sys; sys.path.append("sources")'
 
 # Use multiple processes to speed up Pylint. Specifying 0 will auto-detect the
 # number of processors available to use, and will cap the count on Windows to
@@ -209,7 +209,7 @@ method-naming-style=snake_case
 
 # Regular expression matching correct method names. Overrides method-naming-
 # style. If left empty, method names will be checked with the set naming style.
-#method-rgx=
+method-rgx=([^\\W\\dA-Z][^\\WA-Z]{1,}|_[^\\WA-Z]*|__[^\\WA-Z\\d_][^\\WA-Z]+__)$
 
 # Naming style matching correct module names.
 module-naming-style=snake_case
@@ -275,7 +275,7 @@ valid-metaclass-classmethod-first-arg=mcs
 
 # List of regular expressions of class ancestor names to ignore when counting
 # public methods (see R0903)
-exclude-too-few-public-methods=
+exclude-too-few-public-methods=Enum
 
 # List of qualified class names to ignore when counting class parents (see
 # R0901)
