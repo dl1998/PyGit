@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  REPOSITORY_NAME: 'action-demo'
+  REPOSITORY_NAME: 'py-git'
   THRESHOLD: 0.9
 permissions: write-all
 jobs:

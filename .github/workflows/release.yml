@@ -4,7 +4,7 @@ on:
     branches:
       - main
 env:
-  REPOSITORY_NAME: action-demo
+  REPOSITORY_NAME: py-git
 jobs:
   create-release:
     name: Create a new release
