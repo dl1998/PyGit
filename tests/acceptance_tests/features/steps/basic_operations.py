@@ -7,7 +7,7 @@ from behave import given, when, then
 from behave.runner import Context
 
 from sources.exceptions import GitException
-from sources.git import GitRepository, Commit
+from sources.git import GitRepository
 
 
 @given("new git repository")
@@ -29,7 +29,7 @@ def step_impl(context: Context):
     new_file = repository.path.joinpath('add_file.txt')
     logging.info(f'Create a new file: {new_file}')
     with new_file.open('w') as file:
-        file.write(f'Add new file for testing "git add" command.\r\n')
+        file.write(r'Add new file for testing "git add" command.\r\n')
     context.new_file = new_file
 
 
@@ -65,8 +65,11 @@ def step_impl(context: Context):
 def step_impl(context: Context):
     new_file: Path = context.new_file
     repository: GitRepository = context.repository
+    successfully_removed = False
     try:
         repository.git_command.execute(['ls-files', '--error-unmatch', new_file.name])
-        assert False
+        successfully_removed = False
     except GitException:
-        assert True
+        successfully_removed = True
+    finally:
+        assert successfully_removed
