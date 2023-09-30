@@ -15,17 +15,9 @@ DESCRIPTION = 'Python Git CLI Wrapper'
 URL = 'https://github.com/dl1998/PyGit'
 EMAIL = 'dima.leschenko1998@gmail.com'
 AUTHOR = 'Dmytro Leshchenko'
-REQUIRES_PYTHON = '>=3.6.0'
+REQUIRES_PYTHON = '>=3.7.0'
 VERSION = '0.0.1'
 RELEASE = VERSION
-
-REQUIRED = [
-
-]
-
-EXTRAS = [
-
-]
 
 here = os.path.abspath(os.path.dirname(__file__))
 
@@ -176,28 +168,39 @@ class BuildDocsCommand(Command):
     Custom command to build documentation with Sphinx
     """
     doc_dir: Path
+    source_dir: Path
+    output_dir: Path
 
     user_options = [
-        ('doc-dir=', None, 'The documentation output directory'),
+        ('doc-dir=', None, 'The documentation directory'),
+        ('source-dir=', None, 'The documentation sources directory'),
+        ('output-dir=', None, 'The documentation output directory'),
     ]
 
     def initialize_options(self):
         self.doc_dir = None
+        self.source_dir = None
+        self.output_dir = None
 
     def finalize_options(self) -> None:
         self.doc_dir = Path(self.doc_dir) if self.doc_dir else Path(__file__).parent.joinpath('docs')
+        if self.source_dir is None:
+            self.source_dir = self.doc_dir.joinpath('source')
+        if self.output_dir is None:
+            self.output_dir = self.doc_dir.joinpath('build')
 
     def run(self):
         build_command = [
             'sphinx-build',
             '-b', 'html',
-            '-d', str(self.doc_dir.joinpath('_build/doctrees')),
+            '-d', str(self.doc_dir.joinpath('build/doctrees')),
             '-j', 'auto',
-            str(self.doc_dir),
-            str(self.doc_dir.joinpath('_build/html'))
+            str(self.source_dir),
+            str(self.output_dir)
         ]
 
         try:
+            print(' '.join(build_command))
             subprocess.check_call(build_command)
         except subprocess.CalledProcessError as e:
             print(f"Error: Failed to build documentation with Sphinx: {e}")
@@ -208,39 +211,72 @@ class SphinxGenerate(Command):
     """
     Class responsible for Sphinx project generation.
     """
+    name: str
+    author: str
+    version: str
+    release: str
+    language: str
+    template: str
+    doc_dir: str
+
     user_options = [
         ('name', None, 'The project name'),
         ('author', None, 'The project author'),
         ('version', None, 'The project version'),
         ('release', None, 'The project release'),
+        ('language', None, 'The project language'),
+        ('template', None, 'The project template'),
+        ('doc-dir', None, 'The project root'),
     ]
 
     def initialize_options(self) -> NoReturn:
         """
-        If command receive arguments, then method can be used to set default values.
+        If command receives arguments, then method can be used to set default values.
         """
         self.name = None
         self.author = None
         self.version = None
         self.release = None
+        self.language = None
+        self.template = None
+        self.doc_dir = None
 
     def finalize_options(self) -> NoReturn:
         """
         If command receive arguments, then method can be used to set final values for arguments.
         """
-        pass
+        if self.name is None:
+            self.name = NAME
+        if self.author is None:
+            self.author = AUTHOR
+        if self.version is None:
+            self.version = about['__version__']
+        if self.release is None:
+            self.release = about['__version__']
+        if self.language is None:
+            self.language = 'en'
+        if self.template is None:
+            self.template = str(Path('_docs').absolute())
+        if self.doc_dir is None:
+            self.doc_dir = str(Path('docs').absolute())
 
     def run(self) -> None:
         generate_command = [
-            'sphinx-build',
-            '-b', 'html',
-            '-d', str(self.doc_dir.joinpath('_build/doctrees')),
-            '-j', 'auto',
-            str(self.doc_dir),
-            str(self.doc_dir.joinpath('_build/html'))
+            'sphinx-quickstart',
+            '--sep',
+            '-p', self.name,
+            '-a', self.author,
+            '-v', self.version,
+            '-r', self.release,
+            '-l', self.language,
+            '--ext-autodoc',
+            '--ext-githubpages',
+            '-t', self.template,
+            str(self.doc_dir)
         ]
 
         try:
+            print(' '.join(generate_command))
             subprocess.check_call(generate_command)
         except subprocess.CalledProcessError as e:
             print(f"Error: Failed to generate documentation with Sphinx: {e}")
@@ -353,11 +389,11 @@ class SphinxAutoDoc(Command):
         Generate Sphinx project and documentation.
         """
         docs_path = os.path.join(here, 'docs')
-        templates = os.path.join(docs_path, '_documentation_templates')
+        templates = os.path.join(docs_path, '_docs')
         sources_path = os.path.join(here, 'sources')
         rel_sources_path = os.path.relpath(sources_path, here)
         self.__print_configuration()
-        cmd = ['sphinx-apidoc', '--templatedir', templates, '--force', '-o', docs_path]
+        cmd = ['sphinx-apidoc', '--templatedir', templates, '--force', '-o', os.path.join(docs_path, 'source')]
         if self.generate_project:
             cmd.extend(['--full', '-a', '-H', NAME, '-A', AUTHOR, '-V', VERSION, '-R', RELEASE])
         if self.with_private_methods:
@@ -379,57 +415,74 @@ class SphinxAutoDoc(Command):
 
 
 cmd_class = {
-    'prepare-venv': PrepareVirtualEnvironmentCommand,
-    'sphinx-generate-project': SphinxGenerate,
-    'sphinx-update-modules': SphinxAutoDoc,
-    'sphinx-build': BuildDocsCommand
+    'prepare_venv': PrepareVirtualEnvironmentCommand,
+    'sphinx_generate_project': SphinxGenerate,
+    'sphinx_update_modules': SphinxAutoDoc,
+    'sphinx_build': BuildDocsCommand
 }
 
 command_options = {
-
+    'sphinx-generate-project': {
+        'name': (NAME, 'Specify the project name'),
+        'author': (AUTHOR, 'Specify the project author'),
+        'version': (VERSION, 'Specify the project version'),
+        'release': (RELEASE, 'Specify the project release'),
+        'language': ('en', 'Specify the project language'),
+        'template': ('_docs', 'Specify the project template'),
+        'doc-dir': ('docs', 'Specify the documentation directory'),
+    },
 }
 
 
 def parse_requirements(file_path):
-    with open(file_path, 'r') as f:
-        requirements = f.read().splitlines()
+    if os.path.exists(file_path):
+        with open(file_path, 'r', encoding='utf-8') as f:
+            requirements = f.read().splitlines()
+    else:
+        requirements = []
     return requirements
 
 
-# Path to the requirements.txt file
-requirements_path = 'requirements.txt'
+def main():
+    # Path to the requirements.txt file
+    requirements_path = 'requirements.txt'
 
-# Parse the requirements from requirements.txt
-requirements = parse_requirements(requirements_path)
+    # Parse the requirements from requirements.txt
+    requirements = parse_requirements(requirements_path)
 
-setup(
-    name=NAME,
-    version=about['__version__'],
-    description=DESCRIPTION,
-    long_description=long_description,
-    author=AUTHOR,
-    author_email=EMAIL,
-    maintainer=AUTHOR,
-    maintainer_email=EMAIL,
-    python_requires=REQUIRES_PYTHON,
-    install_requires=requirements,
-    url=URL,
-    platforms=['any'],
-    packages=find_packages(exclude=['tests', '*.tests', '*.tests.*', 'tests.*']),
-    include_package_data=True,
-    license='MIT',
-    classifiers=[
-        "License :: OSI Approved :: MIT License",
-        "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.6",
-        "Programming Language :: Python :: 3.7",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
-        "Programming Language :: Python :: 3.10",
-    ],
-    keywords=['git', 'version control', 'sources control', 'Git wrapper', 'Git CLI', 'Git commands', 'Git automation',
-              'Git interface', 'Git integration', 'Git management', 'Git utility', 'Git interaction', 'Git convenience',
-              'Git operations', 'Git workflow'],
-    cmdclass=cmd_class,
-    command_options=command_options,
-)
+    setup(
+        name=NAME,
+        version=about['__version__'],
+        description=DESCRIPTION,
+        long_description=long_description,
+        long_description_content_type='text/markdown',
+        author=AUTHOR,
+        author_email=EMAIL,
+        maintainer=AUTHOR,
+        maintainer_email=EMAIL,
+        python_requires=REQUIRES_PYTHON,
+        install_requires=requirements,
+        url=URL,
+        platforms=['any'],
+        packages=find_packages(exclude=['tests', '*.tests', '*.tests.*', 'tests.*']),
+        include_package_data=True,
+        license='MIT',
+        classifiers=[
+            "License :: OSI Approved :: MIT License",
+            "Programming Language :: Python :: 3",
+            "Programming Language :: Python :: 3.7",
+            "Programming Language :: Python :: 3.8",
+            "Programming Language :: Python :: 3.9",
+            "Programming Language :: Python :: 3.10",
+            "Programming Language :: Python :: 3.11",
+        ],
+        keywords=['git', 'version control', 'sources control', 'Git wrapper', 'Git CLI', 'Git commands',
+                  'Git automation', 'Git interface', 'Git integration', 'Git management', 'Git utility',
+                  'Git interaction', 'Git convenience', 'Git operations', 'Git workflow'],
+        cmdclass=cmd_class,
+        command_options=command_options,
+    )
+
+
+if __name__ == '__main__':
+    main()
