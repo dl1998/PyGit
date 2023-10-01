@@ -37,6 +37,9 @@ from sources.utils.path_util import PathUtil
 
 
 class GitConfig:
+    """
+    Class for accessing and modifying git configuration file (config).
+    """
     __configuration_path: Path
 
     def __init__(self, configuration_path: Union[str, Path]):
@@ -45,26 +48,63 @@ class GitConfig:
 
     @staticmethod
     def __read_configuration(path: Path) -> ConfigParser:
+        """
+        Method reads configuration from the file.
+
+        :param path: Path to the git config file.
+        :type path: Path
+        :return: Parsed configuration.
+        """
         parser = ConfigParser()
         parser.read(path)
         return parser
 
-    def get(self, section: str, name: str):
+    def get(self, section: str, name: str) -> str:
+        """
+        Method returns value for the requested parameter from the provided section in the parsed file.
+
+        :param section: Section in which searched parameter is located.
+        :type section: str
+        :param name: Name of the parameter.
+        :type name: str
+        :return: Value of the parameter from the provided section and name.
+        """
         return self.__data.get(section, name)
 
-    def set(self, section: str, name: str, value: str):
+    def set(self, section: str, name: str, value: str) -> NoReturn:
+        """
+        Method overrides value for the parameter in the provided section under provided name in the parsed file.
+
+        :param section: Section in which parameter will be updated.
+        :type section: str
+        :param name: Name of the parameter.
+        :type name: str
+        :param value: New value for the parameter.
+        :type value: str
+        """
         self.__data.set(section, name, value)
 
-    def save(self):
+    def save(self) -> NoReturn:
+        """
+        Save changes made to configuration back into the file.
+        """
         with self.__configuration_path.open('w', encoding='UTF-8') as file:
             self.__data.write(file)
 
     @property
     def path(self) -> Path:
+        """
+        Path to the configuration file.
+        """
         return self.__configuration_path
 
     @property
-    def remotes(self):
+    def remotes(self) -> List[Remote]:
+        """
+        Method reads all remotes defined in the config file and returns list of the Remote objects.
+
+        :return: List of the Remote objects.
+        """
         regex = re.compile(r'^remote\s*\"(?P<remote>[^"]*)\"$')
         sections = self.__data.sections()
         remotes = []
