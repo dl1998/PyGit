@@ -117,6 +117,9 @@ class GitConfig:
 
 
 class GitIgnore:
+    """
+    Class for manipulations with .gitignore exclude patterns list.
+    """
     def __init__(self, path: Union[str, Path]):
         self.__path = PathUtil.convert_to_path(path)
         if not self.__path.exists():
@@ -124,19 +127,43 @@ class GitIgnore:
         self.exclude_patterns = self.__read_file(self.__path)
 
     @classmethod
-    def create_from_content(cls, path: Path, content: str):
+    def create_from_content(cls, path: Union[str, Path], content: str) -> 'GitIgnore':
+        """
+        Create GitIgnore instance with the provided content.
+
+        :param path: Path to the '.gitignore' file.
+        :type path: Union[str, Path]
+        :param content: Content of the '.gitignore' file.
+        :type content: str
+        :return: New instance of the GitIgnore class.
+        """
         instance = cls(path)
         instance.exclude_patterns = GitIgnore.__read_content(content.split('\n'))
         return instance
 
     @staticmethod
-    def __read_file(path: Path):
+    def __read_file(path: Path) -> List[str]:
+        """
+        Read exclude patterns from the provided '.gitignore' file.
+
+        :param path: Path to the '.gitignore' file.
+        :type path: Path
+        :return: List with exclude patterns.
+        """
         with path.open('r') as file:
             exclude_patterns = GitIgnore.__read_content(file.readlines())
         return exclude_patterns
 
     @staticmethod
-    def __read_content(content: List[str]):
+    def __read_content(content: List[str]) -> List[str]:
+        """
+        Parse content lines of the '.gitignore' file and return exclude patterns.
+
+        :param content: Content of the file in the list format (each line is represented as the one element of the
+        list).
+        :type content: List[str]
+        :return: List of exclude patterns.
+        """
         exclude_patterns = []
         for line in content:
             line = line.strip()
@@ -144,10 +171,20 @@ class GitIgnore:
                 exclude_patterns.append(line)
         return exclude_patterns
 
-    def refresh(self):
+    def refresh(self) -> NoReturn:
+        """
+        Refresh exclude patterns from the file.
+        """
         self.exclude_patterns = self.__read_file(self.__path)
 
-    def save(self, path: Union[str, Path, None] = None):
+    def save(self, path: Union[str, Path, None] = None) -> NoReturn:
+        """
+        Save current list of exclude patterns to the provided file, if no file has been provided, then save to the
+        current file.
+
+        :param path: Path where content will be saved.
+        :type path: Union[str, Path, None]
+        """
         if path is None:
             path = self.__path
         else:
