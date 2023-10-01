@@ -109,3 +109,9 @@ class GitCheckoutException(GitCommandException):
     """
     Exception thrown when 'checkout' operation has failed.
     """
+
+
+class GitForEachRefException(GitCommandException):
+    """
+    Exception thrown when 'for-each-ref' operation has failed.
+    """
