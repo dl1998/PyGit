@@ -22,6 +22,7 @@ from sources.models.repository_information import GitRepositoryPaths
 from sources.models.tags import Tags
 from sources.options.add_options import AddCommandDefinitions
 from sources.options.clone_options import CloneCommandDefinitions
+from sources.options.config_options import ConfigCommandDefinitions
 from sources.options.init_options import InitCommandDefinitions
 from sources.options.mv_options import MvCommandDefinitions
 from sources.options.options import GitOption
@@ -356,8 +357,14 @@ class GitRepository:
             self.__tags = tags_parser.tags
 
     def __get_default_author(self):
-        name = self.__git_command.execute(['config', 'user.name']).strip()
-        email = self.__git_command.execute(['config', 'user.email']).strip()
+        user_name_options = [
+            ConfigCommandDefinitions.Options.NAME.create_option('user.name')
+        ]
+        name = self.__git_command.execute(user_name_options, ConfigCommandDefinitions).strip()
+        user_email_options = [
+            ConfigCommandDefinitions.Options.NAME.create_option('user.email')
+        ]
+        email = self.__git_command.execute(user_email_options, ConfigCommandDefinitions).strip()
         return Author(name=name, email=email)
 
     @staticmethod
