@@ -55,12 +55,12 @@ class TagsParser:
         tags.extend(self.get_tags())
         return Tags(tags)
 
-    def parse_tags(self, raw_tags: List[str]) -> List[Union[LightweightTag, AnnotatedTag]]:
+    def parse_tags(self, raw_tags: List[List[str]]) -> List[Union[LightweightTag, AnnotatedTag]]:
         """
         Parse list of the raw strings with tags returned by 'git for-each-ref' to list of tags objects.
 
         :param raw_tags: List of raw strings with tags information.
-        :type raw_tags: List[str]
+        :type raw_tags: List[List[str]]
         :return: List of tags objects.
         """
         tags = []
