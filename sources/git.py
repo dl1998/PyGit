@@ -21,6 +21,7 @@ from sources.models.remotes import Remotes, Remote
 from sources.models.repository_information import GitRepositoryPaths
 from sources.models.tags import Tags
 from sources.options.add_options import AddCommandDefinitions
+from sources.options.checkout_options import CheckoutCommandDefinitions
 from sources.options.clone_options import CloneCommandDefinitions
 from sources.options.config_options import ConfigCommandDefinitions
 from sources.options.init_options import InitCommandDefinitions
@@ -120,6 +121,7 @@ class GitIgnore:
     """
     Class for manipulations with .gitignore exclude patterns list.
     """
+
     def __init__(self, path: Union[str, Path]):
         self.__path = PathUtil.convert_to_path(path)
         if not self.__path.exists():
@@ -332,11 +334,12 @@ class FilesChangesHandler:
 class CheckoutHandler:
     __new_branch: str
 
-    def __init__(self, new_branch: str, repository: 'GitRepository', old_branch: Optional[str] = None):
+    def __init__(self, new_branch: str, repository: 'GitRepository', old_branch: Optional[str] = None,
+                 create_if_not_exist: bool = False):
         self.__new_branch = new_branch
         self.__old_branch = old_branch
         self.__repository = repository
-        self.checkout(self.__new_branch)
+        self.checkout(self.__new_branch, create_if_not_exist)
 
     def __enter__(self):
         return self
@@ -344,11 +347,18 @@ class CheckoutHandler:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.checkout(self.__old_branch)
 
-    def checkout(self, branch: Optional[str] = None):
+    def checkout(self, branch: Optional[str] = None, create_if_not_exist: bool = False):
         if branch is None:
             branch = self.__new_branch
         logging.info('Switching to "%s" branch.', branch)
-        self.__repository.git_command.execute(['checkout', branch])
+        branch_exist = self.__repository.branches[branch] is not None
+        options = []
+        if not branch_exist and create_if_not_exist:
+            logging.info('Creating a new branch "%s"', branch)
+            options.append(CheckoutCommandDefinitions.Options.NEW_BRANCH.create_option(branch))
+        else:
+            options.append(CheckoutCommandDefinitions.Options.BRANCH.create_option(branch))
+        self.__repository.git_command.checkout(*options)
         self.__repository.refresh_repository(refresh_active_branch=True, refresh_commits=True)
 
 
@@ -520,8 +530,8 @@ class GitRepository:
     def __read_remotes(self):
         return Remotes(self.__git_config.remotes)
 
-    def checkout(self, branch: str):
-        return CheckoutHandler(branch, self, self.__active_branch.name)
+    def checkout(self, branch: str, create_if_not_exist: bool = False):
+        return CheckoutHandler(branch, self, self.__active_branch.name, create_if_not_exist)
 
     def create_commit(self, message: str, author: Optional[Author] = None, date: Optional[datetime] = None,
                       commit_hash: str = None, parent: Union[str, Commit] = None):
