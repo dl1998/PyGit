@@ -195,6 +195,9 @@ class GitIgnore:
 
 
 class FilesChangesHandler:
+    """
+    Class tracks and classifies changes in the files within the repository.
+    """
     START = 'start'
     END = 'end'
 
@@ -219,6 +222,13 @@ class FilesChangesHandler:
 
     @property
     def files_status(self):
+        """
+        Method checks status of the files by comparing original files state with current files state. All files changes
+        are classified as added, modified, or removed.
+
+        :return: Dictionary with changes classified as added, modified, and removed, additionally contains excluded
+        files.
+        """
         self.__update_files_hash(self.__repository.path.absolute(), self.__files_hashes[self.END])
         result = {
             self.ADDED: self.__get_added(self.__files_hashes[self.START], self.__files_hashes[self.END]),
@@ -227,20 +237,37 @@ class FilesChangesHandler:
         }
         if self.__repository.gitignore:
             result[self.EXCLUDED] = self.__get_excluded(self.__files_hashes[self.END],
-                                                        self.__repository.gitignore.patterns)
+                                                        self.__repository.gitignore.exclude_patterns)
         return result
 
     @staticmethod
-    def __update_files_hash(parent: Path, files_list: Dict[str, str]):
+    def __update_files_hash(parent: Path, files_dictionary: Dict[str, str]) -> NoReturn:
+        """
+        Method updates files hashes in the provided dictionary.
+
+        :param parent: Parent path, files hashes will be generated for files under this folder.
+        :type parent: Path
+        :param files_dictionary: Dictionary that contains file name and its hash.
+        :type files_dictionary: Dict[str, str]
+        """
         for root, _, files in os.walk(parent.absolute()):
             for file in files:
                 absolute_path = Path(root, file)
                 with absolute_path.open('rb') as binary_file:
                     file_hash = hashlib.md5(binary_file.read()).hexdigest()
-                    files_list[str(absolute_path)] = file_hash
+                    files_dictionary[str(absolute_path)] = file_hash
 
     @staticmethod
-    def __get_added(start: Dict, end: Dict):
+    def __get_added(start: Dict, end: Dict) -> List[str]:
+        """
+        Check which files has been added and return list of file names.
+
+        :param start: Dictionary with files and their hashes at the beginning.
+        :type start: Dict
+        :param end: Dictionary with files and their hashes at the end.
+        :type end: Dict
+        :return: List of added files.
+        """
         result = []
         for key, _ in end.items():
             if key not in start.keys():
@@ -248,7 +275,16 @@ class FilesChangesHandler:
         return result
 
     @staticmethod
-    def __get_modified(start: Dict, end: Dict):
+    def __get_modified(start: Dict, end: Dict) -> List[str]:
+        """
+        Check which files has been modified and return list of file names.
+
+        :param start: Dictionary with files and their hashes at the beginning.
+        :type start: Dict
+        :param end: Dictionary with files and their hashes at the end.
+        :type end: Dict
+        :return: List of modified files.
+        """
         result = []
         for key, value in start.items():
             if key in end.keys() and value != end[key]:
@@ -256,7 +292,16 @@ class FilesChangesHandler:
         return result
 
     @staticmethod
-    def __get_removed(start: Dict, end: Dict):
+    def __get_removed(start: Dict, end: Dict) -> List[str]:
+        """
+        Check which files has been removed and return list of file names.
+
+        :param start: Dictionary with files and their hashes at the beginning.
+        :type start: Dict
+        :param end: Dictionary with files and their hashes at the end.
+        :type end: Dict
+        :return: List of removed files.
+        """
         result = []
         for key, _ in start.items():
             if key not in end.keys():
@@ -264,7 +309,16 @@ class FilesChangesHandler:
         return result
 
     @staticmethod
-    def __get_excluded(files: List, excludes: List):
+    def __get_excluded(files: Dict[str, str], excludes: List[str]) -> List[str]:
+        """
+        Check which files are on the exclude list and return all excluded files.
+
+        :param files: Dictionary with files and their hashes.
+        :type files: Dict[str, str]
+        :param excludes: List of exclude patterns.
+        :type excludes: List[str]
+        :return: List of files that are excluded.
+        """
         result = []
         for key, _ in files.items():
             for exclude in excludes:
