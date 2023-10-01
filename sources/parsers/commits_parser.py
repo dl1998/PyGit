@@ -90,8 +90,10 @@ class CommitsParser:
         options.append(LogCommandDefinitions.Options.PRETTY.create_option(f'format:{self.FORMAT_RAW}'))
         options.append(LogCommandDefinitions.Options.DATE.create_option(f'format:{self.DATE_FORMAT}'))
         commit_attributes = len(self.FORMAT)
-        output = self.__git_command.execute(options, LogCommandDefinitions)
-        lines = output.strip().split('\n')
+        output = self.__git_command.log(*options).strip()
+        if not output:
+            return Commits()
+        lines = output.split('\n')
         raw_commits = [lines[row_index:row_index + commit_attributes] for row_index in
                        range(len(lines) - commit_attributes, -1, commit_attributes * -1)]
         return self.parse_commits(raw_commits)
