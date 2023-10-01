@@ -2,7 +2,7 @@
 Module contains models for git tags.
 """
 from dataclasses import dataclass
-from typing import List, ClassVar, Union, Optional
+from typing import List, Union, Optional
 
 from sources.models.base_classes import Author, Reference
 from sources.models.commits import Commit
