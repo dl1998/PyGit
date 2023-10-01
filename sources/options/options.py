@@ -19,14 +19,82 @@ class GitOption:
 
 
 @dataclass
+class GitOptionNameAlias:
+    """
+    Class stores fields necessary to define git option alias.
+    """
+    name: str
+    short_option: bool = field(default=False)
+
+
+@dataclass
+class GitOptionNameAliases:
+    """
+    Class stores all aliases for the git option.
+    """
+    aliases: List[GitOptionNameAlias] = field(default_factory=list)
+
+    def get_aliases(self, short_option: bool) -> List[GitOptionNameAlias]:
+        """
+        Return list of the aliases limited to short options or long options.
+
+        :param short_option: If True, then returns all short option aliases, otherwise returns all long aliases.
+        :type short_option: bool
+        :return: Found aliases that satisfies criteria.
+        """
+        found_aliases = []
+        for alias in self.aliases:
+            if alias.short_option == short_option:
+                found_aliases.append(alias)
+        return found_aliases
+
+    def has_short_aliases(self) -> bool:
+        """
+        Returns whether aliases list has short options.
+
+        :return: True, if there is at least one short option alias on the list of aliases, otherwise False.
+        """
+        return len(self.get_aliases(short_option=True)) > 0
+
+    def has_long_aliases(self) -> bool:
+        """
+        Returns whether aliases list has long options.
+
+        :return: True, if there is at least one long option alias on the list of aliases, otherwise False.
+        """
+        return len(self.get_aliases(short_option=False)) > 0
+
+    def exists(self, name: str) -> bool:
+        """
+        Check is alias with provided name exists on the list of the aliases.
+
+        :return: True, if alias exists, otherwise False.
+        """
+        for alias in self.aliases:
+            if alias.name == name:
+                return True
+        return False
+
+    def get_names(self) -> List[str]:
+        """
+        Collect and return all aliases names.
+
+        :return: List with aliases names.
+        """
+        names = []
+        for alias in self.aliases:
+            names.append(alias.name)
+        return names
+
+
+@dataclass
 class GitOptionDefinition:
     """
     Class defines git option for the git command. It describes option behaviour and some attributes applicable for this
     option.
     """
-    name: Union[str, 'CommandOptions']
+    name_aliases: Union[GitOptionNameAliases, 'CommandOptions']
     type: Union[Type, Tuple]
-    short_name: str = field(default=None)
     required: bool = field(default=False)
     positional: bool = field(default=False)
     position: int = field(default=None)
@@ -34,8 +102,8 @@ class GitOptionDefinition:
     separator: str = field(default=' ')
 
     def __post_init__(self):
-        if isinstance(self.name, CommandOptions):
-            self.name = self.name.value
+        if isinstance(self.name_aliases, CommandOptions):
+            self.name = self.name_aliases.value
 
     def compare_with_option(self, other: GitOption) -> bool:
         """
@@ -51,7 +119,7 @@ class GitOptionDefinition:
             types = self.type
         else:
             types = tuple([self.type])
-        if self.name != other.name:
+        if not self.name_aliases.exists(other.name):
             is_the_same = False
         if type(other.value) not in types:
             is_the_same = False
@@ -129,7 +197,8 @@ class GitCommand:
         last_position = positions[-1]
         for definition in self.definitions:
             if definition.type == list and definition.position != last_position:
-                return False, definition.name
+                names = ', '.join(definition.name_aliases.get_names())
+                return False, f'[{names}]'
         return True, None
 
     def validate_required(self, options: Union[GitOption, List[GitOption]]) -> Tuple[bool, List[str]]:
@@ -142,11 +211,17 @@ class GitCommand:
         otherwise it is set as False. List of string contains name of the options that are required, but they are
         missing.
         """
-        required_definitions = [definition.name for definition in self.definitions if definition.required]
+        required_definitions = [definition.name_aliases for definition in self.definitions if definition.required]
         for option in options:
-            if option.name in required_definitions:
-                required_definitions.remove(option.name)
-        return len(required_definitions) == 0, required_definitions
+            for required_definition in required_definitions:
+                if required_definition.exists(option.name):
+                    required_definitions.remove(required_definition)
+                    break
+        missing_definitions = []
+        for required_definition in required_definitions:
+            aliases = '|'.join(required_definition.get_names())
+            missing_definitions.append(f'({aliases})')
+        return len(required_definitions) == 0, missing_definitions
 
     def validate_choices(self, option: GitOption, definition: Optional[GitOptionDefinition] = None) -> bool:
         """
@@ -176,10 +251,10 @@ class GitCommand:
         command = []
         positional_order = [definition for definition in self.definitions if definition.positional]
         positional_order = sorted(positional_order, key=lambda positional: positional.position)
-        positional_order = [positional.name for positional in positional_order]
+        positional_order = [positional.name_aliases for positional in positional_order]
         for positional_name in positional_order:
             for positional_option in positional_options:
-                if positional_name != positional_option.name:
+                if not positional_name.exists(positional_option.name):
                     continue
                 if isinstance(positional_option.value, list):
                     values = positional_option.value
@@ -207,10 +282,12 @@ class GitCommand:
                 positional_options.append(option)
                 continue
             if not isinstance(option.value, bool) or option.value is not False:
-                if definition.short_name is not None:
-                    command.append(f'-{definition.short_name}')
+                if definition.name_aliases.has_short_aliases():
+                    short_alias = definition.name_aliases.get_aliases(short_option=True)[0]
+                    command.append(f'-{short_alias}')
                 else:
-                    command.append(f'--{definition.name}')
+                    long_alias = definition.name_aliases.get_aliases(short_option=False)[0]
+                    command.append(f'--{long_alias}')
             if not isinstance(option.value, bool) and definition.separator == ' ':
                 command.append(option.value)
             elif not isinstance(option.value, bool):
@@ -245,4 +322,8 @@ class CommandOptions(Enum):
         :type value: Any
         :return: A new GitOption object for this option with the provided value.
         """
-        return GitOption(name=self.value, value=value)
+        if self.value.has_long_aliases():
+            name_alias = self.value.get_aliases(short_option=False)[0]
+        else:
+            name_alias = self.value.get_aliases(short_option=True)[0]
+        return GitOption(name=name_alias.name, value=value)
