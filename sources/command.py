@@ -8,13 +8,14 @@ from typing import Union, List, Optional, Type
 
 from sources.exceptions import GitCommandException, GitException, GitPushException, GitPullException, GitRmException, \
     GitMvException, GitAddException, GitCloneException, GitInitException, GitShowException, GitConfigException, \
-    GitCheckoutException, GitForEachRefException
+    GitCheckoutException, GitForEachRefException, GitLogException
 from sources.options.add_options import AddCommandDefinitions
 from sources.options.checkout_options import CheckoutCommandDefinitions
 from sources.options.clone_options import CloneCommandDefinitions
 from sources.options.config_options import ConfigCommandDefinitions
 from sources.options.for_each_ref_options import ForEachRefCommandDefinitions
 from sources.options.init_options import InitCommandDefinitions
+from sources.options.log_options import LogCommandDefinitions
 from sources.options.mv_options import MvCommandDefinitions
 from sources.options.options import GitCommand, GitOption
 from sources.options.pull_options import PullCommandDefinitions
@@ -262,3 +263,16 @@ class GitCommandRunner:
         """
         return self.__execute_git_command(list(options), ForEachRefCommandDefinitions, GitForEachRefException,
                                           log_output)
+
+    def log(self, *options: GitOption, log_output: bool = False):
+        """
+        Execute 'git log' command with provided options and return stdout of the command. Optionally it can log
+        stdout in the runtime, if 'log_output' option has been set as True.
+
+        :param options: Options for the 'git log' command.
+        :type options: Tuple[GitOption]
+        :param log_output: Set as True, if it shall log stdout of the command in the runtime, otherwise False.
+        :type log_output: bool
+        :return: Stdout returned by 'git log' command.
+        """
+        return self.__execute_git_command(list(options), LogCommandDefinitions, GitLogException, log_output)
