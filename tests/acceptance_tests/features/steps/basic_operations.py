@@ -7,7 +7,55 @@ from behave import given, when, then
 from behave.runner import Context
 
 from sources.exceptions import GitException
-from sources.git import GitRepository
+from sources.git import GitRepository, PathsMapping
+
+
+@given("new local repository path")
+def step_impl(context: Context):
+    hash_name = str(uuid.uuid4())
+    if platform.system().lower() == 'windows':
+        path = Path(r'')
+    else:
+        path = Path(fr'/tmp/git-repository-{hash_name}')
+    logging.info(f'Git Repository: {path}')
+    context.repository_path = path
+
+
+@when("executing 'git init'")
+def step_impl(context: Context):
+    repository = None
+    try:
+        repository = GitRepository.init(path=context.repository_path)
+    except GitException:
+        repository = None
+    context.repository = repository
+
+
+@given("remote repository")
+def step_impl(context: Context):
+    context.remote_repository = 'git@github.com:dl1998/PyGit.git'
+
+
+@when("executing 'git clone'")
+def step_impl(context: Context):
+    repository = None
+    try:
+        hash_name = str(uuid.uuid4())
+        if platform.system().lower() == 'windows':
+            path = Path(r'')
+        else:
+            path = Path(fr'/tmp/git-repository-{hash_name}')
+        logging.info(f'Git Repository: {path}')
+        repository = GitRepository.clone(repository=context.remote_repository, path=path)
+    except GitException:
+        repository = None
+    context.repository = repository
+
+
+@then("new empty repository will be created")
+@then("new repository will be cloned")
+def step_impl(context: Context):
+    assert context.repository is not None
 
 
 @given("new git repository")
@@ -73,3 +121,21 @@ def step_impl(context: Context):
         successfully_removed = True
     finally:
         assert successfully_removed
+
+
+@when("executing 'git mv' on file")
+def step_impl(context: Context):
+    new_file: Path = context.new_file
+    repository: GitRepository = context.repository
+    new_path = new_file.parent.joinpath('renamed_file.txt')
+    mapping = PathsMapping(new_file, new_path)
+    repository.mv(mapping)
+    context.new_path = new_path
+
+
+@then("the file will be renamed")
+def step_impl(context: Context):
+    new_file: Path = context.new_file
+    new_path: Path = context.new_path
+    assert not new_file.exists()
+    assert new_path.exists()
