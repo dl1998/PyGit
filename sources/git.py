@@ -160,7 +160,7 @@ class GitIgnore:
         Parse content lines of the '.gitignore' file and return exclude patterns.
 
         :param content: Content of the file in the list format (each line is represented as the one element of the
-        list).
+            list).
         :type content: List[str]
         :return: List of exclude patterns.
         """
@@ -227,7 +227,7 @@ class FilesChangesHandler:
         are classified as added, modified, or removed.
 
         :return: Dictionary with changes classified as added, modified, and removed, additionally contains excluded
-        files.
+            files.
         """
         self.__update_files_hash(self.__repository.path.absolute(), self.__files_hashes[self.END])
         result = {
@@ -496,11 +496,11 @@ class GitRepository:
         user_name_options = [
             ConfigCommandDefinitions.Options.NAME.create_option('user.name')
         ]
-        name = self.__git_command.execute(user_name_options, ConfigCommandDefinitions).strip()
+        name = self.__git_command.config(*user_name_options).strip()
         user_email_options = [
             ConfigCommandDefinitions.Options.NAME.create_option('user.email')
         ]
-        email = self.__git_command.execute(user_email_options, ConfigCommandDefinitions).strip()
+        email = self.__git_command.config(*user_email_options).strip()
         return Author(name=name, email=email)
 
     @staticmethod
@@ -508,7 +508,7 @@ class GitRepository:
         gitignore = None
         if path.exists():
             options = [ShowCommandDefinitions.Options.OBJECTS.create_option([f'HEAD:{path.name}'])]
-            commit_content = git_command.execute(options, ShowCommandDefinitions)
+            commit_content = git_command.show(*options)
             with path.open('r') as file:
                 content = file.read()
                 if content != commit_content:
@@ -542,7 +542,7 @@ class GitRepository:
         options = list(options)
         options.append(InitCommandDefinitions.Options.DIRECTORY.create_option(str(path.absolute())))
         git_command = GitCommandRunner()
-        git_command.execute(options, InitCommandDefinitions)
+        git_command.init(*options)
         return cls(path)
 
     @classmethod
@@ -556,7 +556,7 @@ class GitRepository:
         if path is not None:
             options.append(CloneCommandDefinitions.Options.DIRECTORY.create_option(str(path.absolute())))
         git_command = GitCommandRunner()
-        git_command.execute(options, CloneCommandDefinitions)
+        git_command.clone(*options)
         return cls(path)
 
     def add(self, files: Union[str, Path, List[Union[str, Path]]], *options: GitOption):
@@ -566,15 +566,11 @@ class GitRepository:
         for file_path in files:
             if isinstance(file_path, Path):
                 file_path = str(file_path.absolute())
-            if not isinstance(file_path, list):
-                file_path = [file_path]
+            file_path = [file_path]
             options = list(options)
             options.append(AddCommandDefinitions.Options.PATHSPEC.create_option(file_path))
-            try:
-                output = self.__git_command.execute(options, AddCommandDefinitions)
-                outputs.append(output.strip())
-            except GitException as exception:
-                raise GitAddException(exception.args[0]) from None
+            output = self.__git_command.add(*options)
+            outputs.append(output.strip())
         return '\n'.join(outputs)
 
     def mv(self, mappings: Union[PathsMapping, List[PathsMapping]], *options: GitOption):
@@ -582,38 +578,31 @@ class GitRepository:
         if isinstance(mappings, PathsMapping):
             mappings = [mappings]
         for mapping in mappings:
-            try:
-                mapping.root_path = self.__repository_information.path
-                options = list(options)
-                options.append(MvCommandDefinitions.Options.SOURCE.create_option(str(mapping.source.absolute())))
-                options.append(
-                    MvCommandDefinitions.Options.DESTINATION.create_option(str(mapping.destination.absolute())))
-                output = self.__git_command.execute(options, MvCommandDefinitions)
-                outputs.append(output.strip())
-            except GitException as exception:
-                raise GitMvException(exception.args[0]) from None
+            mapping.root_path = self.__repository_information.path
+            options = list(options)
+            options.append(MvCommandDefinitions.Options.SOURCE.create_option(str(mapping.source.absolute())))
+            options.append(
+                MvCommandDefinitions.Options.DESTINATION.create_option(str(mapping.destination.absolute())))
+            output = self.__git_command.mv(*options)
+            outputs.append(output.strip())
         return '\n'.join(outputs)
 
     def rm(self, files: Union[str, Path, List[Union[str, Path]]], *options: GitOption):
         outputs = []
         if isinstance(files, (str, Path)):
             files = [files]
+        raw_repository_path = str(self.__repository_information.path.absolute())
+        options = list(options)
         for file_path in files:
-            raw_repository_path = str(self.__repository_information.path.absolute())
             if isinstance(file_path, str) and file_path.startswith(raw_repository_path):
                 file_path = Path(file_path)
             else:
                 file_path = self.__repository_information.path.joinpath(file_path)
-            file_path = str(file_path.absolute())
-            if not isinstance(file_path, list):
-                file_path = [file_path]
-            options = list(options)
-            options.append(RmCommandDefinitions.Options.PATHSPEC.create_option(file_path))
-            try:
-                output = self.__git_command.execute(options, RmCommandDefinitions)
-                outputs.append(output.strip())
-            except GitException as exception:
-                raise GitRmException(exception.args[0]) from None
+            file_path = [str(file_path.absolute())]
+            command_options = options.copy()
+            command_options.append(RmCommandDefinitions.Options.PATHSPEC.create_option(file_path))
+            output = self.__git_command.rm(*command_options)
+            outputs.append(output.strip())
         return '\n'.join(outputs)
 
     @staticmethod
@@ -628,24 +617,16 @@ class GitRepository:
 
     def pull(self, remote: Remote, reference: Optional[Union[Reference, Refspec]] = None, *options: GitOption):
         refspec = self.__get_refspec(reference)
-        try:
-            options = list(options)
-            options.append(PullCommandDefinitions.Options.REPOSITORY.create_option(remote.name))
-            if refspec:
-                options.append(PullCommandDefinitions.Options.REFSPEC.create_option(refspec))
-            output = self.__git_command.execute(options, PullCommandDefinitions)
-            return output
-        except GitException as exception:
-            raise GitPullException(exception.args[0]) from None
+        options = list(options)
+        options.append(PullCommandDefinitions.Options.REPOSITORY.create_option(remote.name))
+        if refspec:
+            options.append(PullCommandDefinitions.Options.REFSPEC.create_option(refspec))
+        return self.__git_command.pull(*options)
 
     def push(self, remote: Remote, reference: Optional[Union[Reference, Refspec]] = None, *options: GitOption):
         refspec = self.__get_refspec(reference)
-        try:
-            options = list(options)
-            options.append(PushCommandDefinitions.Options.REPOSITORY.create_option(remote.name))
-            if refspec:
-                options.append(PushCommandDefinitions.Options.REFSPEC.create_option(refspec))
-            output = self.__git_command.execute(options, PushCommandDefinitions)
-            return output
-        except GitException as exception:
-            raise GitPushException(exception.args[0]) from None
+        options = list(options)
+        options.append(PushCommandDefinitions.Options.REPOSITORY.create_option(remote.name))
+        if refspec:
+            options.append(PushCommandDefinitions.Options.REFSPEC.create_option(refspec))
+        return self.__git_command.push(*options)
