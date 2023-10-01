@@ -103,7 +103,7 @@ class GitOptionDefinition:
 
     def __post_init__(self):
         if isinstance(self.name_aliases, CommandOptions):
-            self.name = self.name_aliases.value
+            self.name_aliases = self.name_aliases.value
 
     def compare_with_option(self, other: GitOption) -> bool:
         """
@@ -283,10 +283,10 @@ class GitCommand:
                 continue
             if not isinstance(option.value, bool) or option.value is not False:
                 if definition.name_aliases.has_short_aliases():
-                    short_alias = definition.name_aliases.get_aliases(short_option=True)[0]
+                    short_alias = definition.name_aliases.get_aliases(short_option=True)[0].name
                     command.append(f'-{short_alias}')
                 else:
-                    long_alias = definition.name_aliases.get_aliases(short_option=False)[0]
+                    long_alias = definition.name_aliases.get_aliases(short_option=False)[0].name
                     command.append(f'--{long_alias}')
             if not isinstance(option.value, bool) and definition.separator == ' ':
                 command.append(option.value)

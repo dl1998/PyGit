@@ -2,7 +2,8 @@
 Module contains classes that defines options that could be configured for 'git push' command.
 Reference: https://git-scm.com/docs/git-push
 """
-from sources.options.options import GitCommand, GitOptionDefinition, CommandOptions
+from sources.options.options import GitCommand, GitOptionDefinition, CommandOptions, GitOptionNameAliases, \
+    GitOptionNameAlias
 
 
 class PushCommandDefinitions(GitCommand):
@@ -14,15 +15,34 @@ class PushCommandDefinitions(GitCommand):
         """
         Options class for 'git push' command, it contains options that can be configured.
         """
-        VERBOSE = 'verbose'
-        RECURSE_SUBMODULES = 'recurse-submodules'
-        ALL = 'all'
-        BRANCHES = 'branches'
-        PRUNE = 'prune'
-        DELETE = 'delete'
-        TAGS = 'tags'
-        REPOSITORY = 'repository'
-        REFSPEC = 'refspec'
+        VERBOSE = GitOptionNameAliases(aliases=[
+            GitOptionNameAlias(name='verbose', short_option=False),
+            GitOptionNameAlias(name='v', short_option=True),
+        ])
+        RECURSE_SUBMODULES = GitOptionNameAliases(aliases=[
+            GitOptionNameAlias(name='recurse-submodules', short_option=False),
+        ])
+        ALL = GitOptionNameAliases(aliases=[
+            GitOptionNameAlias(name='all', short_option=False),
+        ])
+        BRANCHES = GitOptionNameAliases(aliases=[
+            GitOptionNameAlias(name='branches', short_option=False),
+        ])
+        PRUNE = GitOptionNameAliases(aliases=[
+            GitOptionNameAlias(name='prune', short_option=False),
+        ])
+        DELETE = GitOptionNameAliases(aliases=[
+            GitOptionNameAlias(name='delete', short_option=False),
+        ])
+        TAGS = GitOptionNameAliases(aliases=[
+            GitOptionNameAlias(name='tags', short_option=False),
+        ])
+        REPOSITORY = GitOptionNameAliases(aliases=[
+            GitOptionNameAlias(name='repository', short_option=False),
+        ])
+        REFSPEC = GitOptionNameAliases(aliases=[
+            GitOptionNameAlias(name='refspec', short_option=False),
+        ])
 
     class RecurseSubmodulesChoices(CommandOptions):
         """
@@ -36,14 +56,14 @@ class PushCommandDefinitions(GitCommand):
     def __init__(self):
         super().__init__('push')
         self.definitions = [
-            GitOptionDefinition(name=self.Options.VERBOSE, type=bool, short_name='v'),
-            GitOptionDefinition(name=self.Options.RECURSE_SUBMODULES, type=str, choices=self.RecurseSubmodulesChoices,
-                                separator='='),
-            GitOptionDefinition(name=self.Options.ALL, type=bool),
-            GitOptionDefinition(name=self.Options.BRANCHES, type=bool),
-            GitOptionDefinition(name=self.Options.PRUNE, type=bool),
-            GitOptionDefinition(name=self.Options.DELETE, type=bool),
-            GitOptionDefinition(name=self.Options.TAGS, type=bool),
-            GitOptionDefinition(name=self.Options.REPOSITORY, type=str, positional=True, position=0),
-            GitOptionDefinition(name=self.Options.REFSPEC, type=str, positional=True, position=1),
+            GitOptionDefinition(name_aliases=self.Options.VERBOSE, type=bool),
+            GitOptionDefinition(name_aliases=self.Options.RECURSE_SUBMODULES, type=str,
+                                choices=self.RecurseSubmodulesChoices, separator='='),
+            GitOptionDefinition(name_aliases=self.Options.ALL, type=bool),
+            GitOptionDefinition(name_aliases=self.Options.BRANCHES, type=bool),
+            GitOptionDefinition(name_aliases=self.Options.PRUNE, type=bool),
+            GitOptionDefinition(name_aliases=self.Options.DELETE, type=bool),
+            GitOptionDefinition(name_aliases=self.Options.TAGS, type=bool),
+            GitOptionDefinition(name_aliases=self.Options.REPOSITORY, type=str, positional=True, position=0),
+            GitOptionDefinition(name_aliases=self.Options.REFSPEC, type=str, positional=True, position=1),
         ]

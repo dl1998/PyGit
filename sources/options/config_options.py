@@ -2,7 +2,8 @@
 Module contains classes that defines options that could be configured for 'git config' command.
 Reference: https://git-scm.com/docs/git-config
 """
-from sources.options.options import GitCommand, GitOptionDefinition, CommandOptions
+from sources.options.options import GitCommand, GitOptionDefinition, CommandOptions, GitOptionNameAliases, \
+    GitOptionNameAlias
 
 
 class ConfigCommandDefinitions(GitCommand):
@@ -13,14 +14,20 @@ class ConfigCommandDefinitions(GitCommand):
         """
         Options class for 'git config' command, it contains options that can be configured.
         """
-        NAME = 'name'
-        VALUE = 'value'
-        VALUE_PATTERN = 'value-pattern'
+        NAME = GitOptionNameAliases(aliases=[
+            GitOptionNameAlias(name='name', short_option=False),
+        ])
+        VALUE = GitOptionNameAliases(aliases=[
+            GitOptionNameAlias(name='value', short_option=False),
+        ])
+        VALUE_PATTERN = GitOptionNameAliases(aliases=[
+            GitOptionNameAlias(name='value-pattern', short_option=False),
+        ])
 
     def __init__(self):
         super().__init__('config')
         self.definitions = [
-            GitOptionDefinition(name=self.Options.NAME, type=str, positional=True, position=0),
-            GitOptionDefinition(name=self.Options.VALUE, type=str, positional=True, position=1),
-            GitOptionDefinition(name=self.Options.VALUE_PATTERN, type=str, positional=True, position=2),
+            GitOptionDefinition(name_aliases=self.Options.NAME, type=str, positional=True, position=0),
+            GitOptionDefinition(name_aliases=self.Options.VALUE, type=str, positional=True, position=1),
+            GitOptionDefinition(name_aliases=self.Options.VALUE_PATTERN, type=str, positional=True, position=2),
         ]
