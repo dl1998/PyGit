@@ -161,9 +161,9 @@ class GitCommand:
         :type options: Union[GitOption, List[GitOption]]
         :raises GitMissingDefinitionException: If option doesn't have definition.
         :raises GitIncorrectOptionValueException: If option has choices, then check that the value is present on the
-        choices list.
+            choices list.
         :raises GitIncorrectPositionalOptionDefinitionException: If there is a positional option of the list type that
-        is not defined on the last position.
+            is not defined on the last position.
         :raises GitMissingRequiredOptionsException: If not all required options are present.
         """
         if isinstance(options, GitOption):
@@ -189,8 +189,8 @@ class GitCommand:
         Method checks that there are no positional options of the list type that are defined not on the last position.
 
         :return: Tuple with boolean and optional string, boolean contains True if everything is correct and False if
-        there is an incorrect option. Optional string contains name of the definition which failed the check, where if
-        all positional options passed the check, then None will be returned.
+            there is an incorrect option. Optional string contains name of the definition which failed the check, where
+            if all positional options passed the check, then None will be returned.
         """
         positions = [definition.position for definition in self.definitions if definition.positional]
         positions = sorted(positions)
@@ -208,8 +208,8 @@ class GitCommand:
         :param options: List of provided options for the command.
         :type options: Union[GitOption, List[GitOption]]
         :return: Tuple with boolean and list of strings. Boolean is set as True, if all required options are present,
-        otherwise it is set as False. List of string contains name of the options that are required, but they are
-        missing.
+            otherwise it is set as False. List of string contains name of the options that are required, but they are
+            missing.
         """
         required_definitions = [definition.name_aliases for definition in self.definitions if definition.required]
         for option in options:
