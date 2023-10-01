@@ -115,3 +115,9 @@ class GitForEachRefException(GitCommandException):
     """
     Exception thrown when 'for-each-ref' operation has failed.
     """
+
+
+class GitLogException(GitCommandException):
+    """
+    Exception thrown when 'log' operation has failed.
+    """
