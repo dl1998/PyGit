@@ -13,8 +13,6 @@ class Tag(Reference):
     """
     Base class that represents git tag.
     """
-    DELIMITER: ClassVar[str] = '%n'
-    FORMAT: ClassVar[str] = DELIMITER.join(['%aN', '%aE', '%H'])
     name: str
     commit: Commit
 
