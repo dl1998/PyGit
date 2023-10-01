@@ -51,6 +51,18 @@ class GitCommandException(GitException):
     """
 
 
+class GitInitException(GitCommandException):
+    """
+    Exception thrown when 'init' operation has failed.
+    """
+
+
+class GitCloneException(GitCommandException):
+    """
+    Exception thrown when 'clone' operation has failed.
+    """
+
+
 class GitAddException(GitCommandException):
     """
     Exception thrown when 'add' operation has failed.
@@ -78,4 +90,22 @@ class GitPullException(GitCommandException):
 class GitPushException(GitCommandException):
     """
     Exception thrown when 'push' operation has failed.
+    """
+
+
+class GitShowException(GitCommandException):
+    """
+    Exception thrown when 'show' operation has failed.
+    """
+
+
+class GitConfigException(GitCommandException):
+    """
+    Exception thrown when 'config' operation has failed.
+    """
+
+
+class GitCheckoutException(GitCommandException):
+    """
+    Exception thrown when 'checkout' operation has failed.
     """
