@@ -212,7 +212,9 @@ class PathsMapping:
     __destination: Path
     __root_path: Path
 
-    def __init__(self, source: Union[str, Path], destination: Union[str, Path], root_path: Union[str, Path]):
+    def __init__(self, source: Union[str, Path], destination: Union[str, Path], root_path: Union[str, Path] = None):
+        if root_path is None:
+            root_path = Path()
         self.root_path = root_path
         self.__source = source
         self.__destination = destination
