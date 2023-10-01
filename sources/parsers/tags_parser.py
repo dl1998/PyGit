@@ -90,7 +90,7 @@ class TagsParser:
             ForEachRefCommandDefinitions.Options.FORMAT.create_option(self.RAW_FORMAT),
             ForEachRefCommandDefinitions.Options.PATTERN.create_option(self.PATTERN),
         ]
-        output = self.__git_command.execute(options, ForEachRefCommandDefinitions).strip()
+        output = self.__git_command.for_each_ref(*options).strip()
         if not output:
             return []
         lines = output.split('\n')
