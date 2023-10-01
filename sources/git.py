@@ -36,9 +36,11 @@ from sources.utils.path_util import PathUtil
 
 
 class GitConfig:
+    __configuration_path: Path
+
     def __init__(self, configuration_path: Union[str, Path]):
-        configuration_path = PathUtil.convert_to_path(configuration_path)
-        self.__data = self.__read_configuration(configuration_path)
+        self.__configuration_path = PathUtil.convert_to_path(configuration_path)
+        self.__data = self.__read_configuration(self.__configuration_path)
 
     @staticmethod
     def __read_configuration(path: Path) -> ConfigParser:
@@ -51,6 +53,14 @@ class GitConfig:
 
     def set(self, section: str, name: str, value: str):
         self.__data.set(section, name, value)
+
+    def save(self):
+        with self.__configuration_path.open('w', encoding='UTF-8') as file:
+            self.__data.write(file)
+
+    @property
+    def path(self) -> Path:
+        return self.__configuration_path
 
     @property
     def remotes(self):
