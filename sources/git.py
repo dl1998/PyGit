@@ -77,16 +77,16 @@ class GitConfig:
 
 
 class GitIgnore:
-    def __init__(self, path: Path):
-        self.__path = path
+    def __init__(self, path: Union[str, Path]):
+        self.__path = PathUtil.convert_to_path(path)
         if not self.__path.exists():
             raise FileNotFoundError(self.__path)
-        self.__exclude_patterns = self.__read_file(self.__path)
+        self.exclude_patterns = self.__read_file(self.__path)
 
     @classmethod
     def create_from_content(cls, path: Path, content: str):
         instance = cls(path)
-        instance.__exclude_patterns = GitIgnore.__read_content(content.split('\n'))
+        instance.exclude_patterns = GitIgnore.__read_content(content.split('\n'))
         return instance
 
     @staticmethod
@@ -105,11 +105,16 @@ class GitIgnore:
         return exclude_patterns
 
     def refresh(self):
-        self.__exclude_patterns = self.__read_file(self.__path)
+        self.exclude_patterns = self.__read_file(self.__path)
 
-    @property
-    def patterns(self) -> List[str]:
-        return self.__exclude_patterns
+    def save(self, path: Union[str, Path, None] = None):
+        if path is None:
+            path = self.__path
+        else:
+            path = PathUtil.convert_to_path(path)
+        with path.open('w') as file:
+            for exclude_pattern in self.exclude_patterns:
+                file.write(f'{exclude_pattern}\r\n')
 
 
 class FilesChangesHandler:
