@@ -152,7 +152,7 @@ class GitIgnore:
             path = self.__path
         else:
             path = PathUtil.convert_to_path(path)
-        with path.open('w') as file:
+        with path.open('w', encoding='UTF-8') as file:
             for exclude_pattern in self.exclude_patterns:
                 file.write(f'{exclude_pattern}\r\n')
 
@@ -195,7 +195,7 @@ class FilesChangesHandler:
 
     @staticmethod
     def __update_files_hash(parent: Path, files_list: Dict[str, str]):
-        for root, folders, files in os.walk(parent.absolute()):
+        for root, _, files in os.walk(parent.absolute()):
             for file in files:
                 absolute_path = Path(root, file)
                 with absolute_path.open('rb') as binary_file:
@@ -229,7 +229,7 @@ class FilesChangesHandler:
     @staticmethod
     def __get_excluded(files: List, excludes: List):
         result = []
-        for key, value in files.items():
+        for key, _ in files.items():
             for exclude in excludes:
                 match = fnmatch.fnmatch(key, exclude)
                 if match:
