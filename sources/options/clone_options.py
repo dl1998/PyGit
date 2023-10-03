@@ -1,5 +1,6 @@
 """
 Module contains classes that defines options that could be configured for 'git clone' command.
+
 Reference: https://git-scm.com/docs/git-clone
 """
 from sources.options.options import GitCommand, GitOptionDefinition, CommandOptions, GitOptionNameAlias, \

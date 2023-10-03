@@ -1,5 +1,6 @@
 """
 Module contains classes that defines options that could be configured for 'git add' command.
+
 Reference: https://git-scm.com/docs/git-add
 """
 from sources.options.options import GitCommand, GitOptionDefinition, CommandOptions, GitOptionNameAliases, \
