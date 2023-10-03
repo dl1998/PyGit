@@ -121,3 +121,9 @@ class GitLogException(GitCommandException):
     """
     Exception thrown when 'log' operation has failed.
     """
+
+
+class GitCommitException(GitCommandException):
+    """
+    Exception thrown when 'commit' operation has failed.
+    """

@@ -8,10 +8,11 @@ from typing import Union, List, Optional, Type
 
 from sources.exceptions import GitCommandException, GitException, GitPushException, GitPullException, GitRmException, \
     GitMvException, GitAddException, GitCloneException, GitInitException, GitShowException, GitConfigException, \
-    GitCheckoutException, GitForEachRefException, GitLogException
+    GitCheckoutException, GitForEachRefException, GitLogException, GitCommitException
 from sources.options.add_options import AddCommandDefinitions
 from sources.options.checkout_options import CheckoutCommandDefinitions
 from sources.options.clone_options import CloneCommandDefinitions
+from sources.options.commit_options import CommitCommandDefinitions
 from sources.options.config_options import ConfigCommandDefinitions
 from sources.options.for_each_ref_options import ForEachRefCommandDefinitions
 from sources.options.init_options import InitCommandDefinitions
@@ -276,3 +277,16 @@ class GitCommandRunner:
         :return: Stdout returned by 'git log' command.
         """
         return self.__execute_git_command(list(options), LogCommandDefinitions, GitLogException, log_output)
+
+    def commit(self, *options: GitOption, log_output: bool = False):
+        """
+        Execute 'git commit' command with provided options and return stdout of the command. Optionally it can log
+        stdout in the runtime, if 'log_output' option has been set as True.
+
+        :param options: Options for the 'git commit' command.
+        :type options: Tuple[GitOption]
+        :param log_output: Set as True, if it shall log stdout of the command in the runtime, otherwise False.
+        :type log_output: bool
+        :return: Stdout returned by 'git commit' command.
+        """
+        return self.__execute_git_command(list(options), CommitCommandDefinitions, GitCommitException, log_output)
