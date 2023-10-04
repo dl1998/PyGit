@@ -12,8 +12,8 @@ from pathlib import Path
 from typing import Union, List, Optional, Dict, NoReturn
 
 from sources.command import GitCommandRunner
-from sources.exceptions import GitException, GitPullException, GitRepositoryNotFoundException, \
-    NotGitRepositoryException, GitPushException, GitAddException, GitRmException, GitMvException
+from sources.exceptions import GitException, GitRepositoryNotFoundException, \
+    NotGitRepositoryException
 from sources.models.base_classes import Reference, Author, Refspec
 from sources.models.branches import Branch, Branches
 from sources.models.commits import Commits, Commit
@@ -34,7 +34,7 @@ from sources.options.show_options import ShowCommandDefinitions
 from sources.parsers.branches_parser import BranchesParser
 from sources.parsers.commits_parser import CommitsParser
 from sources.parsers.tags_parser import TagsParser
-from sources.utils.path_util import PathUtil
+from sources.utils.path_util import PathUtil, PathsMapping
 
 
 class GitConfig:
@@ -373,56 +373,6 @@ class CheckoutHandler:
             options.append(CheckoutCommandDefinitions.Options.BRANCH.create_option(branch))
         self.__repository.git_command.checkout(*options)
         self.__repository.refresh_repository(refresh_active_branch=True, refresh_commits=True)
-
-
-class PathsMapping:
-    DELIMITER: str = ':'
-
-    __source: Path
-    __destination: Path
-    __root_path: Path
-
-    def __init__(self, source: Union[str, Path], destination: Union[str, Path], root_path: Union[str, Path] = None):
-        if root_path is None:
-            root_path = Path()
-        self.root_path = root_path
-        self.__source = source
-        self.__destination = destination
-
-    @classmethod
-    def create_from_text(cls, mapping: str, root_path: Union[str, Path] = None):
-        if root_path is None:
-            root_path = Path()
-        source, destination = mapping.strip().split(cls.DELIMITER)
-        source = source.strip()
-        destination = destination.strip()
-        instance = cls(source, destination, root_path)
-        return instance
-
-    def __normalize_path(self, path: Union[str, Path]) -> Path:
-        if isinstance(path, str) and str(path).startswith(str(self.__root_path)):
-            normalized_path = Path(path)
-        elif isinstance(path, str):
-            normalized_path = self.__root_path.joinpath(path)
-        else:
-            normalized_path = path
-        return normalized_path
-
-    @property
-    def source(self) -> Path:
-        return self.__normalize_path(self.__source)
-
-    @property
-    def destination(self) -> Path:
-        return self.__normalize_path(self.__destination)
-
-    @property
-    def root_path(self) -> Path:
-        return self.__root_path
-
-    @root_path.setter
-    def root_path(self, root_path: Union[str, Path]) -> NoReturn:
-        self.__root_path = root_path
 
 
 class GitRepository:
