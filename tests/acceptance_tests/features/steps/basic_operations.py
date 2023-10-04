@@ -8,6 +8,7 @@ from behave.runner import Context
 
 from sources.exceptions import GitException
 from sources.git import GitRepository, PathsMapping
+from sources.options.commit_options import CommitCommandDefinitions
 
 
 @given("new local repository path")
@@ -91,7 +92,10 @@ def step_impl(context: Context):
 @given("commit changes")
 def step_impl(context: Context):
     repository: GitRepository = context.repository
-    repository.git_command.execute(['commit', '-m', 'Add new file'])
+    options = [
+        CommitCommandDefinitions.Options.MESSAGE.create_option('Add new file')
+    ]
+    repository.git_command.commit(*options)
 
 
 @then("new file will be added to the git tracking")
