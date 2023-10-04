@@ -332,6 +332,10 @@ class FilesChangesHandler:
 
 
 class CheckoutHandler:
+    """
+    Class handles checkout to another branch in the context manager. Allowing to switch on the another branch in the
+    context and then reset it back to the original branch.
+    """
     __new_branch: str
 
     def __init__(self, new_branch: str, repository: 'GitRepository', old_branch: Optional[str] = None,
@@ -347,7 +351,16 @@ class CheckoutHandler:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.checkout(self.__old_branch)
 
-    def checkout(self, branch: Optional[str] = None, create_if_not_exist: bool = False):
+    def checkout(self, branch: Optional[str] = None, create_if_not_exist: bool = False) -> NoReturn:
+        """
+        Method checkouts another branch and refresh active branch with commits list. Optionally it can create branch
+        if it doesn't exist.
+
+        :param branch: A branch on which it will switch.
+        :type branch: Optional[str]
+        :param create_if_not_exist: Handles whether it shall create a new branch, if branch doesn't exist.
+        :type create_if_not_exist: bool
+        """
         if branch is None:
             branch = self.__new_branch
         logging.info('Switching to "%s" branch.', branch)
