@@ -376,6 +376,9 @@ class CheckoutHandler:
 
 
 class GitRepository:
+    """
+    Main class that allows to manage git repository.
+    """
     __repository_information: GitRepositoryPaths
     __git_command: GitCommandRunner
     __git_config: GitConfig
@@ -403,41 +406,71 @@ class GitRepository:
 
     @property
     def git_command(self) -> GitCommandRunner:
+        """
+        Git command class instance that allows to execute git commands.
+        """
         return self.__git_command
 
     @property
     def path(self):
+        """
+        Git repository path.
+        """
         return self.__repository_information.path
 
     @property
     def git_path(self):
+        """
+        Path to the '.git' directory in the repository.
+        """
         return self.__repository_information.git_directory
 
     @property
     def gitignore(self):
+        """
+        Path to .gitignore file.
+        """
         return self.__gitignore
 
     @property
     def current_branch(self) -> Optional[Branch]:
+        """
+        Current branch points on the branch to which the repository is currently configured.
+        """
         return self.__active_branch
 
     @property
     def remotes(self) -> Remotes:
+        """
+        List of remotes for the repository.
+        """
         return self.__remotes
 
     @property
     def branches(self) -> Branches:
+        """
+        List of all branches in the repository.
+        """
         return self.__branches
 
     @property
     def commits(self) -> Commits:
+        """
+        List of all commits in the repository.
+        """
         return self.__commits
 
     @property
     def tags(self) -> Tags:
+        """
+        List of all tags in the repository.
+        """
         return self.__tags
 
     def __initialize_default_values(self):
+        """
+        Initialize default empty values for the repository.
+        """
         self.__active_branch = None
         self.__remotes = Remotes()
         self.__branches = Branches()
@@ -445,7 +478,22 @@ class GitRepository:
         self.__tags = Tags()
 
     def refresh_repository(self, refresh_active_branch: bool = False, refresh_branches: bool = False,
-                           refresh_commits: bool = False, refresh_tags: bool = False, refresh_remotes: bool = False):
+                           refresh_commits: bool = False, refresh_tags: bool = False,
+                           refresh_remotes: bool = False) -> NoReturn:
+        """
+        Refresh data in the models in the repository.
+
+        :param refresh_active_branch: If True, then refresh current active branch.
+        :type refresh_active_branch: bool
+        :param refresh_branches: If True, then refresh list of all branches.
+        :type refresh_branches: bool
+        :param refresh_commits: If True, then refresh list of all commits.
+        :type refresh_commits: bool
+        :param refresh_tags: If True, then refresh list of all tags.
+        :type refresh_tags: bool
+        :param refresh_remotes: If True, then refresh list of all remotes.
+        :type refresh_remotes: bool
+        """
         branches_parser = BranchesParser(self.__repository_information, self.__commits)
         branches_parser.refresh_active_branch()
         if refresh_commits:
@@ -465,7 +513,12 @@ class GitRepository:
             tags_parser = TagsParser(self.__git_command, self.__commits)
             self.__tags = tags_parser.tags
 
-    def __get_default_author(self):
+    def __get_default_author(self) -> Author:
+        """
+        Get default author for the repository, based on your configuration.
+
+        :return: Default author for the repository.
+        """
         user_name_options = [
             ConfigCommandDefinitions.Options.NAME.create_option('user.name')
         ]
@@ -478,6 +531,15 @@ class GitRepository:
 
     @staticmethod
     def __read_git_ignore(path: Path, git_command: GitCommandRunner) -> Optional[GitIgnore]:
+        """
+        Read .gitignore file.
+
+        :param path: Path to the '.gitignore' file.
+        :type path: Path
+        :param git_command: Git command class that wraps git commands.
+        :type git_command: GitCommandRunner
+        :return: Git ignore file object.
+        """
         gitignore = None
         if path.exists():
             options = [ShowCommandDefinitions.Options.OBJECTS.create_option([f'HEAD:{path.name}'])]
@@ -490,49 +552,109 @@ class GitRepository:
                 gitignore = GitIgnore(path)
         return gitignore
 
-    def __read_remotes(self):
+    def __read_remotes(self) -> Remotes:
+        """
+        Read remotes to the Remotes object.
+
+        :return: Remotes object with list of all remotes in the repository.
+        """
         return Remotes(self.__git_config.remotes)
 
-    def checkout(self, branch: str, create_if_not_exist: bool = False):
+    def checkout(self, branch: Union[str, Branch], create_if_not_exist: bool = False):
+        """
+        Checkout command that allows to checkout another branch with or without the context manager.
+
+        :param branch: Branch to which it shall switch.
+        :type branch: Union[str, Branch]
+        :param create_if_not_exist: If True, then create a new branch if it doesn't exist, otherwise it will fail when
+            branch doesn't exist.
+        :type create_if_not_exist: bool
+        """
+        if isinstance(branch, Branch):
+            branch = branch.name
         return CheckoutHandler(branch, self, self.__active_branch.name, create_if_not_exist)
 
     def create_commit(self, message: str, author: Optional[Author] = None, date: Optional[datetime] = None,
-                      commit_hash: str = None, parent: Union[str, Commit] = None):
+                      commit_hash: str = '', parent: Union[str, Commit, None] = None) -> Commit:
+        """
+        Method creates a new commit object, without creating the real commit itself.
+
+        :param message: Commit message.
+        :type message: str
+        :param author: Author of the commit.
+        :type author: Optional[Author]
+        :param date: Date of the commit creation.
+        :type date: Optional[datetime]
+        :param commit_hash: Commit object hash.
+        :type commit_hash: str
+        :param parent: Parent commit of the current commit.
+        :type parent: Union[str, Commit, None]
+        :return: A new commit instance.
+        """
         if author is None:
             author = self.__default_author
         if date is None:
             date = datetime.now()
-        if commit_hash is None:
-            commit_hash = ''
         if parent and isinstance(parent, str):
             parent = self.__commits[parent]
         return Commit(message=message, author=author, date=date, commit_hash=commit_hash, parent=parent)
 
     @classmethod
-    def init(cls, path: Union[str, Path], *options: GitOption):
+    def init(cls, path: Union[str, Path], *options: GitOption) -> 'GitRepository':
+        """
+        Initialize new git repository and return a new GitRepository instance for that repository.
+
+        :param path: Path to the new git repository.
+        :type path: Union[str, Path]
+        :param options: Additional options for the 'git init' command.
+        :type options: Tuple[GitOption]
+        :return: GitRepository instance for the new git repository.
+        """
         if isinstance(path, str):
             path = Path(path)
-        options = list(options)
-        options.append(InitCommandDefinitions.Options.DIRECTORY.create_option(str(path.absolute())))
+        command_options = list(options)
+        command_options.append(InitCommandDefinitions.Options.DIRECTORY.create_option(str(path.absolute())))
         git_command = GitCommandRunner()
-        git_command.init(*options)
+        git_command.init(*command_options)
         return cls(path)
 
     @classmethod
-    def clone(cls, repository: Union[str, Remote], path: Union[str, Path] = None, *options: GitOption):
+    def clone(cls, repository: Union[str, Remote], *options: GitOption,
+              path: Union[str, Path] = None) -> 'GitRepository':
+        """
+        Clone new git repository from the remote and return a new GitRepository instance for that repository.
+
+        :param repository: Remote url or Remote object that points to the remote repository that will be cloned.
+        :type repository: Union[str, Remote]
+        :param options: Additional options for the 'git clone' command.
+        :type options: Tuple[GitOption]
+        :param path: Path to the new git repository.
+        :type path: Union[str, Path]
+        :return: GitRepository instance for the new git repository that has been cloned locally.
+        """
         if isinstance(path, str):
             path = Path(path)
         if isinstance(repository, Remote):
             repository = repository.url
-        options = list(options)
-        options.append(CloneCommandDefinitions.Options.REPOSITORY.create_option(repository))
+        command_options = list(options)
+        command_options.append(CloneCommandDefinitions.Options.REPOSITORY.create_option(repository))
         if path is not None:
-            options.append(CloneCommandDefinitions.Options.DIRECTORY.create_option(str(path.absolute())))
+            command_options.append(CloneCommandDefinitions.Options.DIRECTORY.create_option(str(path.absolute())))
         git_command = GitCommandRunner()
-        git_command.clone(*options)
+        git_command.clone(*command_options)
         return cls(path)
 
-    def add(self, files: Union[str, Path, List[Union[str, Path]]], *options: GitOption):
+    def add(self, files: Union[str, Path, List[Union[str, Path]]], *options: GitOption) -> str:
+        """
+        Add a new file or list of files to the tracking.
+
+        :param files: A file or list of files that will be added.
+        :type files: Union[str, Path, List[Union[str, Path]]
+        :param options: List of additional options for the 'git add' command.
+        :type options: Tuple[GitOption]
+        :return: Output from the 'git add' command, if multiple paths were provided, then joined output will be
+            returned.
+        """
         outputs = []
         if isinstance(files, (str, Path)):
             files = [files]
@@ -546,7 +668,17 @@ class GitRepository:
             outputs.append(output.strip())
         return '\n'.join(outputs)
 
-    def mv(self, mappings: Union[PathsMapping, List[PathsMapping]], *options: GitOption):
+    def mv(self, mappings: Union[PathsMapping, List[PathsMapping]], *options: GitOption) -> str:
+        """
+        Move a file or list of files from one place to another and track this change.
+
+        :param mappings: A file mapping or the list of files mappings that contains information about source and
+            destination.
+        :type mappings: Union[PathsMapping, List[PathsMapping]]
+        :param options: List of additional options for the 'git mv' command.
+        :type options: Tuple[GitOption]
+        :return: Output from the 'git mv' command, if multiple paths were provided, then joined output will be returned.
+        """
         outputs = []
         if isinstance(mappings, PathsMapping):
             mappings = [mappings]
@@ -560,7 +692,16 @@ class GitRepository:
             outputs.append(output.strip())
         return '\n'.join(outputs)
 
-    def rm(self, files: Union[str, Path, List[Union[str, Path]]], *options: GitOption):
+    def rm(self, files: Union[str, Path, List[Union[str, Path]]], *options: GitOption) -> str:
+        """
+        Remove a file or list of files and track this change.
+
+        :param files: A file or list of files that will be removed.
+        :type files: Union[str, Path, List[Union[str, Path]]]
+        :param options: List of additional options for the 'git rm' command.
+        :type options: Tuple[GitOption]
+        :return: Output from the 'git rm' command, if multiple paths were provided, then joined output will be returned.
+        """
         outputs = []
         if isinstance(files, (str, Path)):
             files = [files]
@@ -579,7 +720,14 @@ class GitRepository:
         return '\n'.join(outputs)
 
     @staticmethod
-    def __get_refspec(reference: Optional[Union[Reference, Refspec]]):
+    def __get_refspec(reference: Optional[Union[Reference, Refspec]]) -> Optional[str]:
+        """
+        Extract refspec string from the Reference or Refspec object.
+
+        :param reference: Reference that will be converted to string, if not possible, then None returned.
+        :type reference: Optional[str]
+        :return: Reference converted to the string.
+        """
         if isinstance(reference, Reference):
             refspec = reference.path
         elif isinstance(reference, Refspec):
@@ -588,7 +736,18 @@ class GitRepository:
             refspec = None
         return refspec
 
-    def pull(self, remote: Remote, reference: Optional[Union[Reference, Refspec]] = None, *options: GitOption):
+    def pull(self, remote: Remote, *options: GitOption, reference: Optional[Union[Reference, Refspec]] = None) -> str:
+        """
+        Pull changes from the remote repository into local repository.
+
+        :param remote: Remote repository from which changes will be pulled.
+        :type remote: Remote
+        :param options: List of additional options for the 'git pull' command.
+        :type options: Tuple[GitOption]
+        :param reference: Specific reference that will be pulled.
+        :type reference: Optional[Union[Reference, Refspec]]
+        :return: Output from the 'git pull' command.
+        """
         refspec = self.__get_refspec(reference)
         options = list(options)
         options.append(PullCommandDefinitions.Options.REPOSITORY.create_option(remote.name))
@@ -596,7 +755,18 @@ class GitRepository:
             options.append(PullCommandDefinitions.Options.REFSPEC.create_option(refspec))
         return self.__git_command.pull(*options)
 
-    def push(self, remote: Remote, reference: Optional[Union[Reference, Refspec]] = None, *options: GitOption):
+    def push(self, remote: Remote, *options: GitOption, reference: Optional[Union[Reference, Refspec]] = None) -> str:
+        """
+        Push changes to the remote repository from local repository.
+
+        :param remote: Remote repository to which changes will be pushed.
+        :type remote: Remote
+        :param options: List of additional options for the 'git push' command.
+        :type options: Tuple[GitOption]
+        :param reference: Specific reference that will be pushed.
+        :type reference: Optional[Union[Reference, Refspec]]
+        :return: Output from the 'git push' command.
+        """
         refspec = self.__get_refspec(reference)
         options = list(options)
         options.append(PushCommandDefinitions.Options.REPOSITORY.create_option(remote.name))
