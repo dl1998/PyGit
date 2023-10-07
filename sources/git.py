@@ -6,6 +6,7 @@ import logging
 import os
 import re
 from configparser import ConfigParser
+from dataclasses import field, dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Union, List, Optional, Dict, NoReturn
@@ -444,6 +445,18 @@ class CheckoutHandler:
         self.__repository.refresh_repository(refresh_active_branch=True, refresh_commits=True)
 
 
+@dataclass
+class GitObjects:
+    """
+    Class stores different type of git objects, like: remotes, branches, commits, tags.
+    """
+    remotes: Remotes = field(default_factory=Remotes, init=False)
+    commits: Commits = field(default_factory=Commits, init=False)
+    tags: Tags = field(default_factory=Tags, init=False)
+    branches: Branches = field(default_factory=Branches, init=False)
+    active_branch: Optional[Branch] = field(default=None, init=False)
+
+
 class GitRepository:
     """
     Main class that allows to manage git repository.
@@ -452,11 +465,7 @@ class GitRepository:
     __git_command: GitCommandRunner
     __git_config: GitConfig
     __gitignore: GitIgnore
-    __active_branch: Optional[Branch]
-    __remotes: Remotes
-    __branches: Branches
-    __commits: Commits
-    __tags: Tags
+    __objects: GitObjects
 
     def __init__(self, path: Union[str, Path]):
         self.__git_command = GitCommandRunner()
@@ -506,45 +515,41 @@ class GitRepository:
         """
         Current branch points on the branch to which the repository is currently configured.
         """
-        return self.__active_branch
+        return self.__objects.active_branch
 
     @property
     def remotes(self) -> Remotes:
         """
         List of remotes for the repository.
         """
-        return self.__remotes
+        return self.__objects.remotes
 
     @property
     def branches(self) -> Branches:
         """
         List of all branches in the repository.
         """
-        return self.__branches
+        return self.__objects.branches
 
     @property
     def commits(self) -> Commits:
         """
         List of all commits in the repository.
         """
-        return self.__commits
+        return self.__objects.commits
 
     @property
     def tags(self) -> Tags:
         """
         List of all tags in the repository.
         """
-        return self.__tags
+        return self.__objects.tags
 
     def __initialize_default_values(self):
         """
         Initialize default empty values for the repository.
         """
-        self.__active_branch = None
-        self.__remotes = Remotes()
-        self.__branches = Branches()
-        self.__commits = Commits()
-        self.__tags = Tags()
+        self.__objects = GitObjects()
 
     def refresh_repository(self, refresh_active_branch: bool = False, refresh_branches: bool = False,
                            refresh_commits: bool = False, refresh_tags: bool = False,
@@ -563,24 +568,25 @@ class GitRepository:
         :param refresh_remotes: If True, then refresh list of all remotes.
         :type refresh_remotes: bool
         """
-        branches_parser = BranchesParser(self.__repository_information, self.__commits)
+        branches_parser = BranchesParser(self.__repository_information, self.__objects.commits)
         branches_parser.refresh_active_branch()
         if refresh_commits:
             try:
                 commits_parser = CommitsParser(self.__git_command)
-                self.__commits = commits_parser.commits
+                self.__objects.commits = commits_parser.commits
             except GitException:
-                self.__commits = Commits()
+                self.__objects.commits = Commits()
         if refresh_remotes:
-            self.__remotes = self.__read_remotes()
+            self.__objects.remotes = self.__read_remotes()
         if refresh_active_branch:
-            self.__active_branch = Branch(name=branches_parser.active_branch_name,
-                                          commit=self.__commits[branches_parser.active_branch_commit_hash])
+            self.__objects.active_branch = Branch(name=branches_parser.active_branch_name,
+                                                  commit=self.__objects.commits[
+                                                      branches_parser.active_branch_commit_hash])
         if refresh_branches:
-            self.__branches = branches_parser.branches
+            self.__objects.branches = branches_parser.branches
         if refresh_tags:
-            tags_parser = TagsParser(self.__git_command, self.__commits)
-            self.__tags = tags_parser.tags
+            tags_parser = TagsParser(self.__git_command, self.__objects.commits)
+            self.__objects.tags = tags_parser.tags
 
     def __get_default_author(self) -> Author:
         """
@@ -651,7 +657,7 @@ class GitRepository:
         """
         if isinstance(branch, Branch):
             branch = branch.name
-        return CheckoutHandler(branch, self, self.__active_branch.name, create_if_not_exist)
+        return CheckoutHandler(branch, self, self.__objects.active_branch.name, create_if_not_exist)
 
     def create_commit(self, message: str, author: Optional[Author] = None, date: Optional[datetime] = None,
                       commit_hash: str = '', parent: Union[str, Commit, None] = None) -> Commit:
@@ -675,7 +681,7 @@ class GitRepository:
         if date is None:
             date = datetime.now()
         if parent and isinstance(parent, str):
-            parent = self.__commits[parent]
+            parent = self.__objects.commits[parent]
         return Commit(message=message, author=author, date=date, commit_hash=commit_hash, parent=parent)
 
     @classmethod
