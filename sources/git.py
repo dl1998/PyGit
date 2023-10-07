@@ -2,7 +2,6 @@
 Main module that contains entry points classes for the manipulations with the git repository.
 """
 import fnmatch
-import hashlib
 import logging
 import os
 import re
@@ -23,6 +22,7 @@ from sources.models.tags import Tags
 from sources.options.add_options import AddCommandDefinitions
 from sources.options.checkout_options import CheckoutCommandDefinitions
 from sources.options.clone_options import CloneCommandDefinitions
+from sources.options.commit_options import CommitCommandDefinitions
 from sources.options.config_options import ConfigCommandDefinitions
 from sources.options.init_options import InitCommandDefinitions
 from sources.options.mv_options import MvCommandDefinitions
@@ -203,47 +203,42 @@ class FilesChangesHandler:
     START = 'start'
     END = 'end'
 
-    ADDED = 'added'
-    MODIFIED = 'modified'
-    REMOVED = 'removed'
-    EXCLUDED = 'excluded'
+    ADDED_TAG = 'added'
+    MODIFIED_TAG = 'modified'
+    REMOVED_TAG = 'removed'
+    EXCLUDED_TAG = 'excluded'
 
     def __init__(self, repository: 'GitRepository'):
         self.__repository = repository
         self.__files_hashes = {self.START: {}, self.END: {}}
-
-    def __enter__(self):
+        self.__files_status = {}
         self.__update_files_hash(self.__repository.path.absolute(), self.__files_hashes[self.START])
-        return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        # TODO(dl1998): Optimize the code. Sort "start" and "end", so it will be faster. Instead of checking using
-        #  "in", walk through lists and classify file by file. Consider to use shared input.
-        result = self.files_status
-        logging.debug(result)
-
-    @property
-    def files_status(self):
+    def update_files_status(self) -> NoReturn:
         """
         Method checks status of the files by comparing original files state with current files state. All files changes
         are classified as added, modified, or removed.
-
-        :return: Dictionary with changes classified as added, modified, and removed, additionally contains excluded
-            files.
         """
+        self.__files_hashes[self.END] = {}
         self.__update_files_hash(self.__repository.path.absolute(), self.__files_hashes[self.END])
-        result = {
-            self.ADDED: self.__get_added(self.__files_hashes[self.START], self.__files_hashes[self.END]),
-            self.MODIFIED: self.__get_modified(self.__files_hashes[self.START], self.__files_hashes[self.END]),
-            self.REMOVED: self.__get_removed(self.__files_hashes[self.START], self.__files_hashes[self.END])
+        self.__files_status = {
+            self.ADDED_TAG: self.__get_added(self.__files_hashes[self.START], self.__files_hashes[self.END]),
+            self.MODIFIED_TAG: self.__get_modified(self.__files_hashes[self.START], self.__files_hashes[self.END]),
+            self.REMOVED_TAG: self.__get_removed(self.__files_hashes[self.START], self.__files_hashes[self.END])
         }
         if self.__repository.gitignore:
-            result[self.EXCLUDED] = self.__get_excluded(self.__files_hashes[self.END],
-                                                        self.__repository.gitignore.exclude_patterns)
-        return result
+            self.__files_status[self.EXCLUDED_TAG] = self.__get_excluded(self.__files_hashes[self.END],
+                                                                         self.__repository.gitignore.exclude_patterns)
+
+    @property
+    def files_status(self) -> Dict[str, List[str]]:
+        """
+        Dictionary with changes classified as added, modified, and removed, additionally contains excluded files.
+        """
+        return self.__files_status
 
     @staticmethod
-    def __update_files_hash(parent: Path, files_dictionary: Dict[str, str]) -> NoReturn:
+    def __update_files_hash(parent: Path, files_dictionary: Dict[str, float]) -> NoReturn:
         """
         Method updates files hashes in the provided dictionary.
 
@@ -255,9 +250,8 @@ class FilesChangesHandler:
         for root, _, files in os.walk(parent.absolute()):
             for file in files:
                 absolute_path = Path(root, file)
-                with absolute_path.open('rb') as binary_file:
-                    file_hash = hashlib.md5(binary_file.read()).hexdigest()
-                    files_dictionary[str(absolute_path)] = file_hash
+                absolute_path_str = str(absolute_path)
+                files_dictionary[absolute_path_str] = os.stat(absolute_path_str).st_mtime
 
     @staticmethod
     def __get_added(start: Dict, end: Dict) -> List[str]:
@@ -329,6 +323,81 @@ class FilesChangesHandler:
                     result.append(key)
                     break
         return result
+
+    @property
+    def added(self) -> List[str]:
+        """
+        List of added files.
+        """
+        return self.__files_status.get(self.ADDED_TAG, [])
+
+    @property
+    def modified(self) -> List[str]:
+        """
+        List of modified files.
+        """
+        return self.__files_status.get(self.MODIFIED_TAG, [])
+
+    @property
+    def removed(self) -> List[str]:
+        """
+        List of removed files.
+        """
+        return self.__files_status.get(self.REMOVED_TAG, [])
+
+    @property
+    def excluded(self) -> List[str]:
+        """
+        List of excluded files.
+        """
+        return self.__files_status.get(self.EXCLUDED_TAG, [])
+
+
+class CommitHandler:
+    """
+    Class handles commit operation including tracking of the changed files.
+    """
+    __commit_message: str
+    __git_repository: 'GitRepository'
+    __files_changes_handler: FilesChangesHandler
+
+    def __init__(self, message: str, git_repository: 'GitRepository'):
+        self.__commit_message = message
+        self.__git_repository = git_repository
+        self.__files_changes_handler = FilesChangesHandler(git_repository)
+
+    def __enter__(self):
+        return self.__files_changes_handler
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        changes_found = self.__update_changed_files()
+        if changes_found:
+            logging.info('Creating a new commit')
+            logging.info('Message: %s', self.__commit_message)
+            options = [
+                CommitCommandDefinitions.Options.MESSAGE.create_option(self.__commit_message),
+            ]
+            self.__git_repository.git_command.commit(*options)
+
+    def __update_changed_files(self) -> bool:
+        """
+        Add changes done in the files to the tracking.
+
+        :return: True, if any type of modifications happened (add a new file, modify a file, remove a file), otherwise
+            return False.
+        """
+        self.__files_changes_handler.update_files_status()
+        changes_found = False
+        if self.__files_changes_handler.added:
+            self.__git_repository.add(self.__files_changes_handler.added)
+            changes_found = True
+        if self.__files_changes_handler.modified:
+            self.__git_repository.add(self.__files_changes_handler.modified)
+            changes_found = True
+        if self.__files_changes_handler.removed:
+            self.__git_repository.rm(self.__files_changes_handler.removed)
+            changes_found = True
+        return changes_found
 
 
 class CheckoutHandler:
@@ -560,6 +629,16 @@ class GitRepository:
         """
         return Remotes(self.__git_config.remotes)
 
+    def commit(self, message: str) -> CommitHandler:
+        """
+        Commit changes to the files.
+
+        :param message: A new commit message.
+        :type message: str
+        :return: Commit handler object.
+        """
+        return CommitHandler(message, self)
+
     def checkout(self, branch: Union[str, Branch], create_if_not_exist: bool = False):
         """
         Checkout command that allows to checkout another branch with or without the context manager.
@@ -662,9 +741,9 @@ class GitRepository:
             if isinstance(file_path, Path):
                 file_path = str(file_path.absolute())
             file_path = [file_path]
-            options = list(options)
-            options.append(AddCommandDefinitions.Options.PATHSPEC.create_option(file_path))
-            output = self.__git_command.add(*options)
+            command_options = list(options)
+            command_options.append(AddCommandDefinitions.Options.PATHSPEC.create_option(file_path))
+            output = self.__git_command.add(*command_options)
             outputs.append(output.strip())
         return '\n'.join(outputs)
 
@@ -684,11 +763,11 @@ class GitRepository:
             mappings = [mappings]
         for mapping in mappings:
             mapping.root_path = self.__repository_information.path
-            options = list(options)
-            options.append(MvCommandDefinitions.Options.SOURCE.create_option(str(mapping.source.absolute())))
-            options.append(
+            command_options = list(options)
+            command_options.append(MvCommandDefinitions.Options.SOURCE.create_option(str(mapping.source.absolute())))
+            command_options.append(
                 MvCommandDefinitions.Options.DESTINATION.create_option(str(mapping.destination.absolute())))
-            output = self.__git_command.mv(*options)
+            output = self.__git_command.mv(*command_options)
             outputs.append(output.strip())
         return '\n'.join(outputs)
 
@@ -706,14 +785,13 @@ class GitRepository:
         if isinstance(files, (str, Path)):
             files = [files]
         raw_repository_path = str(self.__repository_information.path.absolute())
-        options = list(options)
         for file_path in files:
             if isinstance(file_path, str) and file_path.startswith(raw_repository_path):
                 file_path = Path(file_path)
             else:
                 file_path = self.__repository_information.path.joinpath(file_path)
             file_path = [str(file_path.absolute())]
-            command_options = options.copy()
+            command_options = list(options)
             command_options.append(RmCommandDefinitions.Options.PATHSPEC.create_option(file_path))
             output = self.__git_command.rm(*command_options)
             outputs.append(output.strip())
