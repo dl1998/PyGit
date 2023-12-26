@@ -1,10 +1,11 @@
 """
 Module contains unit tests for base options classes of git.
 """
-from typing import Any, Type
+from typing import Any, Type, Optional, List, Tuple
 
 import pytest
 
+from pygit.options.testing_utils import GitCommandGenerator
 from sources.exceptions import GitException, GitMissingDefinitionException, GitIncorrectOptionValueException, \
     GitMissingRequiredOptionsException
 from sources.options.options import GitOptionNameAliases, GitOptionNameAlias, GitOptionDefinition, GitOption, \
@@ -15,6 +16,7 @@ class DemoCommand(GitCommand):
     """
     Class inherits 'GitCommand' class and defines 'dummy' git command for testing purposes.
     """
+
     class Options(CommandOptions):
         """
         Class inherits 'CommandOptions' class and defines 'dummy' options for the 'dummy' git command.
@@ -48,6 +50,7 @@ class TestGitOptionNameAliases:
     """
     Class contains unit tests for 'GitOptionNameAliases' class.
     """
+
     @pytest.mark.parametrize('name,short_option,length', [('option', False, 1), ('o', True, 1)],
                              ids=('Get long alias', 'Get short alias'))
     def test_get_aliases_positive(self, name: str, short_option: bool, length: int):
@@ -160,6 +163,7 @@ class TestGitOptionDefinition:
     """
     Class contains unit tests for 'GitOptionDefinition' class.
     """
+
     @pytest.mark.parametrize('name,value,expected', [
         ('option', True, True), ('option', 'value', True), ('o', True, True), ('o', 123, False),
         ('another_option', 'value', False)
@@ -191,6 +195,7 @@ class TestGitCommand:
     """
     Class contains unit tests for 'GitCommand' class.
     """
+
     @pytest.mark.parametrize("name,value,has_definition", [
         ('option', True, True), ('option', 'value', True), ('o', True, True), ('o', 123, False),
         ('another_option', 'value', False)
@@ -269,9 +274,38 @@ class TestGitCommand:
             raise_exception = True
         assert raise_exception
 
+    @pytest.mark.parametrize('positional_definitions,expected', [
+        ([(('option',), str), (('another_option',), list)], (True, None)),
+        ([(('option',), list), (('another_option',), str)], (False, '[option]')),
+        ([(('option', 'o'), list), (('another_option',), str)], (False, '[option, o]')),
+    ], ids=("Correct positional option", "Incorrect positional option with one alias",
+            "Incorrect positional option with two aliases"))
+    def test_validate_positional_list_positive(self, positional_definitions: List[Tuple[Tuple[str], type]],
+                                               expected: Tuple[bool, Optional[str]]):
+        """
+        Method tests that 'validate_positional_list' method from 'GitCommand' class returns Tuple[status, incorrect
+        options] when positional arguments of the type list is defined not on the last position.
+
+        :param positional_definitions: The configuration of the positional arguments.
+        :type positional_definitions: List[Tuple[Tuple[str], type]]
+        :param expected: The expected value that shall be returned by method.
+        :type expected: Tuple[bool, Optional[str]]
+        """
+        definitions = []
+        for definition in positional_definitions:
+            aliases = []
+            for alias in definition[0]:
+                aliases.append({'name': alias, 'short-option': not len(alias) > 1})
+            definitions.append({'aliases': aliases, 'positional': True, 'type': definition[1]})
+        command = GitCommandGenerator.from_dict({
+            'command': 'demo-command',
+            'definitions': definitions
+        })
+        assert command.validate_positional_list() == expected
+
     def test_transform_to_command_positive(self):
         """
-        Method tests that 'transform_to_command' method from 'GitOption' class is able to correctly transform
+        Method tests that 'transform_to_command' method from 'GitCommand' class is able to correctly transform
         'GitOption' list to raw command arguments.
         """
         options = [
