@@ -35,40 +35,52 @@ class CommandDefinitionsTestingUtil:
         assert len(missing_options) == 0
 
 
-class GitCommandGenerator:
+class GitModelGenerator:
     """
     Class contains methods to generate 'GitCommand' class instance.
     """
     @staticmethod
-    def from_dict(parameters: dict) -> 'GitCommand':
+    def generate_git_command(configuration: dict) -> 'GitCommand':
         """
         Method that create an instance of 'GitCommand' class based on the provided dictionary.
         
-        :param parameters: Dictionary that is used to create 'GitCommand' class instance.
-        :type parameters: dict
+        :param configuration: Dictionary that is used to create 'GitCommand' class instance.
+        :type configuration: dict
+        :return: Instance of the 'GitCommand' class.
         """
-        command = GitCommand(parameters['command'])
+        command = GitCommand(configuration['command'])
         definitions = []
         positional_index = 0
-        for definition in parameters['definitions']:
-            aliases = []
-            for alias in definition['aliases']:
-                aliases.append(GitOptionNameAlias(name=alias['name'], short_option=alias['short-option']))
-            option_aliases = GitOptionNameAliases(aliases=aliases)
-            positional = definition.get('positional', False)
-            if positional:
-                position = positional_index
+        for definition in configuration['definitions']:
+            if definition.get('positional', False):
+                definition['position'] = positional_index
                 positional_index += 1
-            else:
-                position = None
-            option_definition = GitOptionDefinition(name_aliases=option_aliases, type=definition.get('type', str),
-                                                    positional=positional, position=position)
-            required = definition.get('required', None)
-            if required:
-                option_definition.required = required
-            choices = definition.get('choices', None)
-            if choices:
-                option_definition.choices = choices
+            option_definition = GitModelGenerator.generate_git_option_definition(definition)
             definitions.append(option_definition)
         command.definitions = definitions
         return command
+
+    @staticmethod
+    def generate_git_option_definition(configuration: dict) -> GitOptionDefinition:
+        """
+        Method that create an instance of 'GitOptionDefinition' class based on the provided dictionary.
+
+        :param configuration: Dictionary that is used to create 'GitOptionDefinition' class instance.
+        :type configuration: dict
+        :return: Instance of the 'GitOptionDefinition' class.
+        """
+        aliases = []
+        for alias in configuration['aliases']:
+            aliases.append(GitOptionNameAlias(name=alias['name'], short_option=alias['short-option']))
+        option_aliases = GitOptionNameAliases(aliases=aliases)
+        positional = configuration.get('positional', False)
+        position = configuration.get('position', None)
+        option_definition = GitOptionDefinition(name_aliases=option_aliases, type=configuration.get('type', str),
+                                                positional=positional, position=position)
+        required = configuration.get('required', None)
+        if required:
+            option_definition.required = required
+        choices = configuration.get('choices', None)
+        if choices:
+            option_definition.choices = choices
+        return option_definition

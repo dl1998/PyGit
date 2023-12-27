@@ -5,7 +5,7 @@ from typing import Any, Type, Optional, List, Tuple
 
 import pytest
 
-from pygit.options.testing_utils import GitCommandGenerator
+from pygit.options.testing_utils import GitModelGenerator
 from sources.exceptions import GitException, GitMissingDefinitionException, GitIncorrectOptionValueException, \
     GitMissingRequiredOptionsException
 from sources.options.options import GitOptionNameAliases, GitOptionNameAlias, GitOptionDefinition, GitOption, \
@@ -297,7 +297,7 @@ class TestGitCommand:
             for alias in definition[0]:
                 aliases.append({'name': alias, 'short-option': not len(alias) > 1})
             definitions.append({'aliases': aliases, 'positional': True, 'type': definition[1]})
-        command = GitCommandGenerator.from_dict({
+        command = GitModelGenerator.generate_git_command({
             'command': 'demo-command',
             'definitions': definitions
         })
@@ -327,7 +327,7 @@ class TestGitCommand:
         options = []
         for option in option_definitions:
             options.append(GitOption(name=option, value='value'))
-        command = GitCommandGenerator.from_dict({
+        command = GitModelGenerator.generate_git_command({
             'command': 'demo-command',
             'definitions': [
                 {
@@ -364,6 +364,51 @@ class TestGitCommand:
             ]
         })
         assert command.validate_required(options) == expected
+
+    @pytest.mark.parametrize("defined_choices,value,with_definition,expected", [
+        (None, 'first', True, True),
+        (None, 'first', False, True),
+        (['one', 'first', 1], 'first', True, True),
+        (['one', 'first', 1], 1, False, True),
+        (['one', 'first', 1], 2, True, False),
+        (['one', 'first', 1], 2, False, False),
+    ], ids=("Correct option without defined choices with definition",
+            "Correct option without defined choices without definition",
+            "Correct option with defined choices with definition",
+            "Correct option with defined choices without definition",
+            "Incorrect option with defined choices with definition",
+            "Incorrect option with defined choices without definition"))
+    def test_validate_choices_positive(self, defined_choices: List, value: Any, with_definition: bool, expected: bool):
+        """
+        Method tests that 'validate_choices' method from 'GitCommand' class returns True, if it is correct option,
+        otherwise return False.
+
+        :param defined_choices: List of choices for the definition.
+        :type defined_choices: List
+        :param value: Git option value.
+        :type value: Any
+        :param with_definition: If true, then test with definition, otherwise test without definition.
+        :type with_definition: bool
+        :param expected: The expected value that shall be returned by method.
+        :type expected: bool
+        """
+        option = GitOption(name='option', value=value)
+        command = GitModelGenerator.generate_git_command({
+            'command': 'demo-command',
+            'definitions': [
+                {
+                    'aliases': [
+                        {
+                            'name': 'option',
+                            'short-option': False
+                        }
+                    ],
+                    'choices': defined_choices,
+                    'type': (str, int)
+                }
+            ]
+        })
+        assert command.validate_choices(option, command.definitions[0] if with_definition else None) == expected
 
     def test_transform_to_command_positive(self):
         """

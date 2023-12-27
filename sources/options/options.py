@@ -97,7 +97,7 @@ class GitOptionDefinition:
     type: Union[Type, Tuple]
     required: bool = field(default=False)
     positional: bool = field(default=False)
-    position: int = field(default=None)
+    position: Optional[int] = field(default=None)
     choices: Union[list, Type[Enum]] = field(default=None)
     separator: str = field(default=' ')
 
