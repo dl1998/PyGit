@@ -303,6 +303,68 @@ class TestGitCommand:
         })
         assert command.validate_positional_list() == expected
 
+    @pytest.mark.parametrize("option_definitions,expected", [
+        (['option', 'long-option', 's'], (True, [])),
+        (['o', 'long-option', 's'], (True, [])),
+        (['option', 's'], (False, ['long-option'])),
+        (['option', 'long-option'], (False, ['s'])),
+        (['long-option', 's'], (False, ['option|o'])),
+        (['option'], (False, ['long-option', 's'])),
+    ], ids=("All required options are present (long alias for two aliases option)",
+            "All required options are present (short alias for two aliases option)",
+            "Long option is missing", "Short option is missing", "Required option with two aliases is missing",
+            "Long option and short option are missing"))
+    def test_validate_required_positive(self, option_definitions: List[str], expected: Tuple[bool, Optional[str]]):
+        """
+        Method tests that 'validate_required' method from 'GitCommand' class returns Tuple[status, missing options],
+        where missing options is a list of options that are required, but missing.
+
+        :param option_definitions: List of options.
+        :type option_definitions: List[str]
+        :param expected: The expected value that shall be returned by method.
+        :type expected: Tuple[bool, Optional[str]]
+        """
+        options = []
+        for option in option_definitions:
+            options.append(GitOption(name=option, value='value'))
+        command = GitCommandGenerator.from_dict({
+            'command': 'demo-command',
+            'definitions': [
+                {
+                    'aliases': [
+                        {
+                            'name': 'option',
+                            'short-option': False
+                        },
+                        {
+                            'name': 'o',
+                            'short-option': True
+                        }
+                    ],
+                    'required': True
+                },
+                {
+                    'aliases': [
+                        {
+                            'name': 'long-option',
+                            'short-option': False
+                        }
+                    ],
+                    'required': True
+                },
+                {
+                    'aliases': [
+                        {
+                            'name': 's',
+                            'short-option': True
+                        }
+                    ],
+                    'required': True
+                },
+            ]
+        })
+        assert command.validate_required(options) == expected
+
     def test_transform_to_command_positive(self):
         """
         Method tests that 'transform_to_command' method from 'GitCommand' class is able to correctly transform

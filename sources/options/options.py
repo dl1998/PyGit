@@ -220,7 +220,7 @@ class GitCommand:
         missing_definitions = []
         for required_definition in required_definitions:
             aliases = '|'.join(required_definition.get_names())
-            missing_definitions.append(f'({aliases})')
+            missing_definitions.append(f'{aliases}')
         return len(required_definitions) == 0, missing_definitions
 
     def validate_choices(self, option: GitOption, definition: Optional[GitOptionDefinition] = None) -> bool:
