@@ -46,6 +46,12 @@ class DemoCommand(GitCommand):
         ]
 
 
+class StringOptions(CommandOptions):
+    first = 'one'
+    second = 'two'
+    third = 'three'
+
+
 class TestGitOptionNameAliases:
     """
     Class contains unit tests for 'GitOptionNameAliases' class.
@@ -424,3 +430,46 @@ class TestGitCommand:
         expected_output = ['command', '-s', '--long-option', 'first', 'value']
         transformed_command = command.transform_to_command(options)
         assert transformed_command == expected_output
+
+class TestCommandOptions:
+    """
+    Class contains unit tests for 'CommandOptions' enum class.
+    """
+    @pytest.mark.parametrize("value,expected", [
+        ('one', True), ('first', False)
+    ], ids=("Value exists", "Values not exists"))
+    def test_create_from_value_positive(self, value: str, expected: bool):
+        """
+        Method tests that 'create_from_value' method from 'CommandOptions' class is able to correctly create
+        'CommandOption' instance based on provided value.
+
+        :param value: The value that shall be found in the enum class.
+        :type value: str
+        :param expected: Whether the value shall be found in the enum class or not.
+        :type expected: bool
+        """
+        option = StringOptions.create_from_value(value)
+        if expected:
+            assert option is not None
+        else:
+            assert option is None
+
+    @pytest.mark.parametrize("short_option", [
+        True, False
+    ], ids=("Short option", "Long option"))
+    def test_create_option_positive(self, short_option: bool):
+        """
+        Method tests that 'create_option' method from 'CommandOptions' class is able to correctly create 'GitOption'
+        instance for 'CommandOptions' class with provided value.
+
+        :param short_option: Whether test short option or long option.
+        :type short_option: bool
+        """
+        if short_option:
+            option = DemoCommand.Options.SHORT_OPTION.create_option('value')
+            option_name = 's'
+        else:
+            option = DemoCommand.Options.LONG_OPTION.create_option('value')
+            option_name = 'long-option'
+        assert option is not None
+        assert option.name == option_name
